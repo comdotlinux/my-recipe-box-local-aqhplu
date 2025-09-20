@@ -1,59 +1,42 @@
-import { Stack, useGlobalSearchParams } from 'expo-router';
-import { SafeAreaProvider, useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+
+import { Stack } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Platform } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { setupErrorLogging } from '../utils/errorLogger';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-
-const STORAGE_KEY = 'emulated_device';
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from '../store';
+import { initDatabase } from '../utils/database';
+import { StatusBar } from 'expo-status-bar';
 
 export default function RootLayout() {
-  const actualInsets = useSafeAreaInsets();
-  const { emulate } = useGlobalSearchParams<{ emulate?: string }>();
-  const [storedEmulate, setStoredEmulate] = useState<string | null>(null);
-
   useEffect(() => {
     // Set up global error logging
     setupErrorLogging();
-
-    if (Platform.OS === 'web') {
-      // If there's a new emulate parameter, store it
-      if (emulate) {
-        localStorage.setItem(STORAGE_KEY, emulate);
-        setStoredEmulate(emulate);
-      } else {
-        // If no emulate parameter, try to get from localStorage
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          setStoredEmulate(stored);
-        }
-      }
-    }
-  }, [emulate]);
-
-  let insetsToUse = actualInsets;
-
-  if (Platform.OS === 'web') {
-    const simulatedInsets = {
-      ios: { top: 47, bottom: 20, left: 0, right: 0 },
-      android: { top: 40, bottom: 0, left: 0, right: 0 },
-    };
-
-    // Use stored emulate value if available, otherwise use the current emulate parameter
-    const deviceToEmulate = storedEmulate || emulate;
-    insetsToUse = deviceToEmulate ? simulatedInsets[deviceToEmulate as keyof typeof simulatedInsets] || actualInsets : actualInsets;
-  }
+    
+    // Initialize database
+    initDatabase().catch(error => {
+      console.error('Failed to initialize database:', error);
+    });
+  }, []);
 
   return (
-    <SafeAreaProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: 'default',
-            }}
-          />
-        </GestureHandlerRootView>
-    </SafeAreaProvider>
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <SafeAreaProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <StatusBar style="dark" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'default',
+              }}
+            />
+          </GestureHandlerRootView>
+        </SafeAreaProvider>
+      </PersistGate>
+    </Provider>
   );
 }

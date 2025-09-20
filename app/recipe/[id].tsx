@@ -1,0 +1,409 @@
+
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Share } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, router } from 'expo-router';
+import { useDispatch, useSelector } from 'react-redux';
+import { commonStyles, colors, typography, spacing, borderRadius } from '../../styles/commonStyles';
+import { RootState, AppDispatch } from '../../store';
+import { loadRecipe, toggleFavorite, deleteRecipe } from '../../store/slices/recipesSlice';
+import Icon from '../../components/Icon';
+
+export default function RecipeDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const dispatch = useDispatch<AppDispatch>();
+  const { currentRecipe, loading } = useSelector((state: RootState) => state.recipes);
+  const [activeTab, setActiveTab] = useState<'ingredients' | 'instructions' | 'notes'>('ingredients');
+
+  useEffect(() => {
+    if (id) {
+      console.log('Loading recipe details for ID:', id);
+      dispatch(loadRecipe(id));
+    }
+  }, [id, dispatch]);
+
+  const handleToggleFavorite = () => {
+    if (currentRecipe) {
+      console.log('Toggling favorite for recipe:', currentRecipe.id);
+      dispatch(toggleFavorite(currentRecipe));
+    }
+  };
+
+  const handleEditRecipe = () => {
+    console.log('Editing recipe:', id);
+    // TODO: Navigate to edit screen
+    Alert.alert('Edit Recipe', 'Edit functionality will be implemented in the next phase.');
+  };
+
+  const handleDeleteRecipe = () => {
+    if (!currentRecipe) return;
+
+    Alert.alert(
+      'Delete Recipe',
+      `Are you sure you want to delete "${currentRecipe.title}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            console.log('Deleting recipe:', currentRecipe.id);
+            await dispatch(deleteRecipe(currentRecipe.id));
+            router.back();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleShareRecipe = async () => {
+    if (!currentRecipe) return;
+
+    try {
+      const shareContent = `${currentRecipe.title}\n\n${currentRecipe.description || ''}\n\nShared from MyRecipeBox Local`;
+      
+      await Share.share({
+        message: shareContent,
+        title: currentRecipe.title,
+      });
+    } catch (error) {
+      console.error('Failed to share recipe:', error);
+    }
+  };
+
+  const formatTime = (minutes?: number) => {
+    if (!minutes) return 'Not specified';
+    if (minutes < 60) return `${minutes} minutes`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours} hour${hours > 1 ? 's' : ''}`;
+  };
+
+  const getDifficultyColor = (difficulty?: string) => {
+    switch (difficulty?.toLowerCase()) {
+      case 'easy': return colors.success;
+      case 'medium': return colors.warning;
+      case 'hard': return colors.error;
+      default: return colors.textSecondary;
+    }
+  };
+
+  const renderTabButton = (tab: typeof activeTab, label: string) => (
+    <TouchableOpacity
+      style={{
+        flex: 1,
+        paddingVertical: spacing.md,
+        alignItems: 'center',
+        backgroundColor: activeTab === tab ? colors.primary : colors.surface,
+        borderRadius: borderRadius.md,
+        marginHorizontal: spacing.xs,
+      }}
+      onPress={() => setActiveTab(tab)}
+    >
+      <Text style={{
+        ...typography.labelMedium,
+        color: activeTab === tab ? colors.background : colors.text,
+      }}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderIngredients = () => {
+    if (!currentRecipe?.ingredients) {
+      return (
+        <Text style={[typography.bodyMedium, { color: colors.textSecondary, fontStyle: 'italic' }]}>
+          No ingredients listed
+        </Text>
+      );
+    }
+
+    const ingredientsList = currentRecipe.ingredients.split('\n').filter(Boolean);
+    
+    return (
+      <View>
+        {ingredientsList.map((ingredient, index) => (
+          <View key={index} style={[commonStyles.row, { marginBottom: spacing.sm }]}>
+            <View style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: colors.primary,
+              marginRight: spacing.md,
+              marginTop: 8,
+            }} />
+            <Text style={[typography.bodyMedium, { flex: 1 }]}>
+              {ingredient.trim()}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderInstructions = () => {
+    if (!currentRecipe?.instructions) {
+      return (
+        <Text style={[typography.bodyMedium, { color: colors.textSecondary, fontStyle: 'italic' }]}>
+          No instructions provided
+        </Text>
+      );
+    }
+
+    const instructionsList = currentRecipe.instructions.split('\n').filter(Boolean);
+    
+    return (
+      <View>
+        {instructionsList.map((instruction, index) => (
+          <View key={index} style={[commonStyles.row, { marginBottom: spacing.md, alignItems: 'flex-start' }]}>
+            <View style={{
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              backgroundColor: colors.primary,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginRight: spacing.md,
+              marginTop: 2,
+            }}>
+              <Text style={[typography.labelSmall, { color: colors.background }]}>
+                {index + 1}
+              </Text>
+            </View>
+            <Text style={[typography.bodyMedium, { flex: 1, lineHeight: 22 }]}>
+              {instruction.trim()}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderNotes = () => {
+    if (!currentRecipe?.notes) {
+      return (
+        <Text style={[typography.bodyMedium, { color: colors.textSecondary, fontStyle: 'italic' }]}>
+          No notes added
+        </Text>
+      );
+    }
+
+    return (
+      <Text style={[typography.bodyMedium, { lineHeight: 22 }]}>
+        {currentRecipe.notes}
+      </Text>
+    );
+  };
+
+  if (loading || !currentRecipe) {
+    return (
+      <SafeAreaView style={commonStyles.safeArea}>
+        <View style={[commonStyles.container, commonStyles.centerContent]}>
+          <Text style={[typography.bodyLarge, { color: colors.textSecondary }]}>
+            Loading recipe...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={commonStyles.safeArea}>
+      <View style={commonStyles.container}>
+        {/* Header */}
+        <View style={{ padding: spacing.md, paddingBottom: spacing.sm }}>
+          <View style={[commonStyles.spaceBetween, { marginBottom: spacing.md }]}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Icon name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+            
+            <View style={commonStyles.row}>
+              <TouchableOpacity
+                style={{ marginRight: spacing.md }}
+                onPress={handleToggleFavorite}
+              >
+                <Icon 
+                  name={currentRecipe.is_favorite ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={currentRecipe.is_favorite ? colors.error : colors.text} 
+                />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={{ marginRight: spacing.md }}
+                onPress={handleShareRecipe}
+              >
+                <Icon name="share" size={24} color={colors.text} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity onPress={handleEditRecipe}>
+                <Icon name="create" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: spacing.xl }}>
+          {/* Recipe Image Placeholder */}
+          <View style={{
+            height: 200,
+            backgroundColor: colors.surfaceVariant,
+            marginHorizontal: spacing.md,
+            borderRadius: borderRadius.lg,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: spacing.lg,
+          }}>
+            <Icon name="camera" size={48} color={colors.textSecondary} />
+            <Text style={[typography.bodySmall, { color: colors.textSecondary, marginTop: spacing.sm }]}>
+              Recipe Photo
+            </Text>
+          </View>
+
+          {/* Recipe Title and Info */}
+          <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.lg }}>
+            <Text style={[typography.headlineSmall, { marginBottom: spacing.sm }]}>
+              {currentRecipe.title}
+            </Text>
+            
+            {currentRecipe.description && (
+              <Text style={[typography.bodyLarge, { 
+                color: colors.textSecondary, 
+                marginBottom: spacing.md,
+                lineHeight: 22 
+              }]}>
+                {currentRecipe.description}
+              </Text>
+            )}
+
+            {/* Recipe Meta */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
+              {currentRecipe.prep_time && (
+                <View style={[commonStyles.row, commonStyles.chip]}>
+                  <Icon name="time" size={14} color={colors.textSecondary} />
+                  <Text style={[commonStyles.chipText, { marginLeft: spacing.xs }]}>
+                    Prep: {formatTime(currentRecipe.prep_time)}
+                  </Text>
+                </View>
+              )}
+              
+              {currentRecipe.cook_time && (
+                <View style={[commonStyles.row, commonStyles.chip]}>
+                  <Icon name="flame" size={14} color={colors.textSecondary} />
+                  <Text style={[commonStyles.chipText, { marginLeft: spacing.xs }]}>
+                    Cook: {formatTime(currentRecipe.cook_time)}
+                  </Text>
+                </View>
+              )}
+              
+              {currentRecipe.servings && (
+                <View style={[commonStyles.row, commonStyles.chip]}>
+                  <Icon name="people" size={14} color={colors.textSecondary} />
+                  <Text style={[commonStyles.chipText, { marginLeft: spacing.xs }]}>
+                    Serves {currentRecipe.servings}
+                  </Text>
+                </View>
+              )}
+              
+              {currentRecipe.difficulty && (
+                <View style={[commonStyles.row, commonStyles.chip]}>
+                  <View style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: getDifficultyColor(currentRecipe.difficulty),
+                    marginRight: spacing.xs,
+                  }} />
+                  <Text style={commonStyles.chipText}>
+                    {currentRecipe.difficulty}
+                  </Text>
+                </View>
+              )}
+              
+              {currentRecipe.rating && (
+                <View style={[commonStyles.row, commonStyles.chip]}>
+                  <Icon name="star" size={14} color={colors.warning} />
+                  <Text style={[commonStyles.chipText, { marginLeft: spacing.xs }]}>
+                    {currentRecipe.rating}/5
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Tags */}
+            {currentRecipe.tags && currentRecipe.tags.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.md }}>
+                {currentRecipe.tags.map((tag, index) => (
+                  <View key={index} style={[commonStyles.chip, { marginBottom: spacing.xs }]}>
+                    <Text style={commonStyles.chipText}>#{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Tab Navigation */}
+          <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.lg }}>
+            <View style={{ flexDirection: 'row', marginBottom: spacing.lg }}>
+              {renderTabButton('ingredients', 'Ingredients')}
+              {renderTabButton('instructions', 'Instructions')}
+              {renderTabButton('notes', 'Notes')}
+            </View>
+
+            {/* Tab Content */}
+            <View style={[commonStyles.card, { minHeight: 200 }]}>
+              {activeTab === 'ingredients' && renderIngredients()}
+              {activeTab === 'instructions' && renderInstructions()}
+              {activeTab === 'notes' && renderNotes()}
+            </View>
+          </View>
+
+          {/* Source URL */}
+          {currentRecipe.source_url && (
+            <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.lg }}>
+              <TouchableOpacity
+                style={[commonStyles.card, commonStyles.row]}
+                onPress={() => {
+                  // TODO: Open URL in browser
+                  Alert.alert('Source URL', currentRecipe.source_url);
+                }}
+              >
+                <Icon name="link" size={20} color={colors.primary} />
+                <Text style={[typography.bodyMedium, { 
+                  color: colors.primary, 
+                  marginLeft: spacing.sm,
+                  flex: 1 
+                }]} numberOfLines={1}>
+                  View Original Recipe
+                </Text>
+                <Icon name="open" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Delete Button */}
+          <View style={{ paddingHorizontal: spacing.md }}>
+            <TouchableOpacity
+              style={[commonStyles.card, { 
+                backgroundColor: colors.error + '10',
+                borderColor: colors.error,
+                borderWidth: 1,
+              }]}
+              onPress={handleDeleteRecipe}
+            >
+              <View style={[commonStyles.row, { justifyContent: 'center' }]}>
+                <Icon name="trash" size={20} color={colors.error} />
+                <Text style={[typography.labelLarge, { 
+                  color: colors.error, 
+                  marginLeft: spacing.sm 
+                }]}>
+                  Delete Recipe
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+  );
+}
