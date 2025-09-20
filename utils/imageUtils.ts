@@ -30,6 +30,11 @@ export const saveImageToAppDirectory = async (imageUri: string, recipeId?: strin
   try {
     console.log('Saving image to app directory:', imageUri);
     
+    if (!FileSystem.documentDirectory) {
+      console.error('Document directory not available');
+      return null;
+    }
+    
     const imagesDir = await createImagesDirectory();
     
     // Generate unique filename

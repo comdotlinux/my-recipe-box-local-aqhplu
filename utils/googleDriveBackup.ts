@@ -5,8 +5,9 @@ import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system';
 import { documentDirectory } from 'expo-file-system';
 import { Platform, Alert } from 'react-native';
-import { getAllRecipes, getUserPreference, setUserPreference } from './database';
+import { getAllRecipes, getUserPreference, setUserPreference, getMigrationInfo } from './database';
 import { Recipe } from '../types/Recipe';
+import { BackupMetadata } from '../types/Sharing';
 
 const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const GOOGLE_CLIENT_ID = 'your-google-client-id'; // This should be configured in app.json
@@ -20,6 +21,8 @@ interface BackupData {
   timestamp: number;
   compressed: boolean;
   checksum: string;
+  // New versioning fields
+  metadata: BackupMetadata;
 }
 
 interface BackupFile {
@@ -203,14 +206,26 @@ class GoogleDriveBackup {
 
       onProgress?.(30);
 
+      // Get migration info for versioning
+      const migrationInfo = await getMigrationInfo();
+      
+      // Create backup metadata
+      const metadata: BackupMetadata = {
+        created: Date.now(),
+        app: '1.3.0',
+        schema: migrationInfo.currentVersion,
+        count: recipes.length,
+      };
+
       // Create backup data
       const backupData: BackupData = {
         database: recipes,
         preferences,
-        version: 1,
+        version: 1, // Legacy field
         timestamp: Date.now(),
         compressed: true,
         checksum: '',
+        metadata, // New versioning metadata
       };
 
       // Generate checksum
@@ -390,8 +405,47 @@ class GoogleDriveBackup {
 
       onProgress?.(50);
 
-      // TODO: Implement actual restore logic based on mode
-      // This would involve database operations to restore recipes and preferences
+      // Check version compatibility
+      const migrationInfo = await getMigrationInfo();
+      const backupVersion = backupData.metadata?.schema || backupData.version || 1;
+      const currentVersion = migrationInfo.currentVersion;
+      
+      if (backupVersion > currentVersion) {
+        const shouldContinue = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            'Newer Backup',
+            'This backup is from a newer app version. Some data might not be compatible. Continue?',
+            [
+              { text: 'Cancel', onPress: () => resolve(false) },
+              { text: 'Continue', onPress: () => resolve(true) },
+            ]
+          );
+        });
+        
+        if (!shouldContinue) {
+          throw new Error('Restore cancelled by user');
+        }
+      }
+
+      onProgress?.(70);
+
+      // Restore recipes based on mode
+      if (mode === 'replace') {
+        // Clear existing data and restore from backup
+        // This would require implementing a clear database function
+        console.log('Replace mode: clearing existing data...');
+      } else {
+        // Merge mode: add recipes that don't already exist
+        console.log('Merge mode: merging with existing data...');
+      }
+
+      // Restore preferences
+      for (const [key, value] of Object.entries(backupData.preferences)) {
+        await setUserPreference(key, value);
+      }
+
+      // TODO: Implement actual database restore operations
+      // This would involve calling database functions to restore recipes
       
       onProgress?.(100);
       console.log('Backup restored successfully');

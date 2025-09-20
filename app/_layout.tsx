@@ -81,21 +81,13 @@ export default function RootLayout() {
     try {
       // Check if it's a recipe import link
       if (url.startsWith('myrecipebox://import/')) {
-        const validationResult = await parseDeepLink(url);
-        
-        if (validationResult.isValid && validationResult.recipe) {
-          // Navigate to import preview
-          router.push({
-            pathname: '/import/preview',
-            params: {
-              recipeData: encodeURIComponent(JSON.stringify(validationResult.recipe)),
-            },
-          });
-        } else {
-          // Show error based on validation result
-          console.error('Deep link validation failed:', validationResult.errorMessage);
-          // The error will be handled in the import preview screen
-        }
+        // Navigate to import preview with the deep link
+        router.push({
+          pathname: '/import/preview',
+          params: {
+            deepLink: encodeURIComponent(url),
+          },
+        });
       }
     } catch (error) {
       console.error('Error handling deep link:', error);

@@ -1,12 +1,53 @@
 
 import { Recipe } from '../types/Recipe';
-import { ShareableRecipe, DeepLinkData, ImportValidationResult } from '../types/Sharing';
-import { getRecipe, getAllRecipes } from './database';
+import { ShareableRecipe, DeepLinkData, ImportValidationResult, ShareData, BackupMetadata } from '../types/Sharing';
+import { getRecipe, getAllRecipes, getMigrationInfo } from './database';
 import CryptoJS from 'crypto-js';
 
 const DEEP_LINK_SCHEME = 'myrecipebox';
 const MAX_LINK_SIZE = 2048; // 2KB limit
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 3; // Updated to v3
+const APP_VERSION = '1.3.0';
+
+// Version compatibility fields
+const FIELDS = {
+  1: ['id', 'title', 'ingredients', 'instructions'],
+  2: ['id', 'title', 'ingredients', 'instructions', 'cooking_method', 'source_type'],
+  3: ['id', 'title', 'ingredients', 'instructions', 'cooking_method', 'source_type', 'nutrition']
+};
+
+// Error messages
+const MSG = {
+  UPDATE_REQUIRED: "Update app to import this recipe",
+  PARTIAL: "Some recipe data will be lost",
+  CORRUPTED: "Recipe data is corrupted",
+  NEWER: "Recipe from newer app version"
+};
+
+// Create versioned share data
+export const createShareData = (recipe: Recipe): ShareData => {
+  const shareData: ShareData = {
+    v: CURRENT_VERSION,
+    ts: Date.now(),
+    app: APP_VERSION,
+    recipe: {
+      // v1 (required)
+      id: recipe.id,
+      title: recipe.title,
+      ingredients: recipe.ingredients || '',
+      instructions: recipe.instructions || '',
+      
+      // v2+ (optional)
+      cooking_method: recipe.difficulty || null, // Map difficulty to cooking_method for now
+      source_type: recipe.source_url ? 'url' : 'manual',
+      
+      // v3+ (optional)
+      nutrition: null // Not implemented yet, placeholder
+    }
+  };
+
+  return shareData;
+};
 
 // Convert Recipe to ShareableRecipe (exclude images and personal data)
 export const createShareableRecipe = (recipe: Recipe): ShareableRecipe => {
@@ -34,9 +75,40 @@ export const createShareableRecipe = (recipe: Recipe): ShareableRecipe => {
   return shareableData;
 };
 
-// Generate deep link from recipe
+// Generate versioned deep link from recipe
 export const generateDeepLink = (recipe: Recipe): string => {
-  console.log('Generating deep link for recipe:', recipe.title);
+  console.log('Generating versioned deep link for recipe:', recipe.title);
+  
+  const shareData = createShareData(recipe);
+  
+  // Use proper base64 encoding for cross-platform compatibility
+  const jsonString = JSON.stringify(shareData);
+  let base64Data: string;
+  
+  if (typeof btoa !== 'undefined') {
+    // Browser environment
+    base64Data = btoa(unescape(encodeURIComponent(jsonString)));
+  } else {
+    // React Native environment
+    const { encode } = require('react-native-base64');
+    base64Data = encode(jsonString);
+  }
+  
+  const deepLink = `${DEEP_LINK_SCHEME}://import/${base64Data}`;
+  
+  // Check size limit
+  if (deepLink.length > MAX_LINK_SIZE) {
+    console.warn('Deep link exceeds size limit:', deepLink.length);
+    throw new Error('Recipe data too large for sharing');
+  }
+  
+  console.log('Generated versioned deep link, size:', deepLink.length);
+  return deepLink;
+};
+
+// Legacy method for backward compatibility
+export const generateLegacyDeepLink = (recipe: Recipe): string => {
+  console.log('Generating legacy deep link for recipe:', recipe.title);
   
   const shareableRecipe = createShareableRecipe(recipe);
   const deepLinkData: DeepLinkData = {
@@ -56,13 +128,85 @@ export const generateDeepLink = (recipe: Recipe): string => {
     throw new Error('Recipe data too large for sharing');
   }
   
-  console.log('Generated deep link, size:', deepLink.length);
+  console.log('Generated legacy deep link, size:', deepLink.length);
   return deepLink;
 };
 
-// Parse deep link and validate
+// Transform recipe data between versions
+export const transform = (recipe: any, toVersion: number): any => {
+  switch (toVersion) {
+    case 2:
+      return {
+        ...recipe,
+        cooking_method: recipe.cooking_method || null,
+        source_type: recipe.source_type || 'manual'
+      };
+    case 3:
+      return {
+        ...recipe,
+        nutrition: recipe.nutrition || null
+      };
+    default:
+      return recipe;
+  }
+};
+
+// Get compatible fields for a version
+export const getCompatibleFields = (recipe: any, maxVersion: number): any => {
+  const fields = FIELDS[maxVersion] || FIELDS[1];
+  return fields.reduce((obj: any, key: string) => {
+    if (recipe[key] !== undefined) {
+      obj[key] = recipe[key];
+    }
+    return obj;
+  }, {});
+};
+
+// Handle import with version compatibility
+export const handleImport = async (data: string): Promise<{ ok?: boolean; recipe?: any; error?: string; partial?: boolean }> => {
+  try {
+    let decodedData: string;
+    
+    if (typeof atob !== 'undefined') {
+      // Browser environment
+      decodedData = atob(data);
+    } else {
+      // React Native environment
+      const { decode } = require('react-native-base64');
+      decodedData = decode(data);
+    }
+    
+    const shareData = JSON.parse(decodedData);
+    const migrationInfo = await getMigrationInfo();
+    const currentVersion = migrationInfo.currentVersion;
+    const shareVersion = shareData.v || 1;
+    
+    console.log(`Import: Share v${shareVersion}, Current v${currentVersion}`);
+    
+    // Check version compatibility
+    if (shareVersion > currentVersion) {
+      return {
+        error: 'UPDATE_REQUIRED',
+        partial: true
+      };
+    }
+    
+    // Transform recipe data to current version
+    let recipe = shareData.recipe;
+    for (let v = shareVersion + 1; v <= currentVersion; v++) {
+      recipe = transform(recipe, v);
+    }
+    
+    return { ok: true, recipe };
+  } catch (error) {
+    console.error('Import failed:', error);
+    return { error: 'CORRUPTED' };
+  }
+};
+
+// Parse deep link and validate (updated for version compatibility)
 export const parseDeepLink = async (deepLink: string): Promise<ImportValidationResult> => {
-  console.log('Parsing deep link:', deepLink);
+  console.log('Parsing versioned deep link:', deepLink);
   
   try {
     // Extract base64 data from deep link
@@ -89,31 +233,92 @@ export const parseDeepLink = async (deepLink: string): Promise<ImportValidationR
     // Decode base64
     let jsonString: string;
     try {
-      jsonString = decodeURIComponent(escape(atob(base64Data)));
+      if (typeof atob !== 'undefined') {
+        // Browser environment
+        jsonString = decodeURIComponent(escape(atob(base64Data)));
+      } else {
+        // React Native environment
+        const { decode } = require('react-native-base64');
+        jsonString = decode(base64Data);
+      }
     } catch (error) {
       console.error('Failed to decode base64:', error);
       return {
         isValid: false,
         error: 'corrupted',
-        errorMessage: 'Link damaged, ask for reshare',
+        errorMessage: MSG.CORRUPTED,
       };
     }
 
-    // Parse JSON
-    let deepLinkData: DeepLinkData;
+    // Parse JSON - try new format first, then legacy
+    let shareData: ShareData | null = null;
+    let legacyData: DeepLinkData | null = null;
+    
     try {
-      deepLinkData = JSON.parse(jsonString);
+      const parsed = JSON.parse(jsonString);
+      
+      // Check if it's new versioned format
+      if (parsed.v && parsed.recipe) {
+        shareData = parsed as ShareData;
+      } else if (parsed.recipe && parsed.timestamp) {
+        // Legacy format
+        legacyData = parsed as DeepLinkData;
+      } else {
+        throw new Error('Unknown format');
+      }
     } catch (error) {
       console.error('Failed to parse JSON:', error);
       return {
         isValid: false,
         error: 'corrupted',
-        errorMessage: 'Link damaged, ask for reshare',
+        errorMessage: MSG.CORRUPTED,
       };
     }
 
-    // Validate structure
-    if (!deepLinkData.recipe || !deepLinkData.timestamp) {
+    let recipe: any;
+    let shareVersion: number;
+
+    if (shareData) {
+      // New versioned format
+      recipe = shareData.recipe;
+      shareVersion = shareData.v;
+      
+      // Validate required fields for versioned format
+      if (!recipe.id || !recipe.title) {
+        return {
+          isValid: false,
+          error: 'invalid',
+          errorMessage: 'Cannot read this recipe',
+        };
+      }
+    } else if (legacyData) {
+      // Legacy format
+      recipe = legacyData.recipe;
+      shareVersion = recipe.version || 1;
+      
+      // Validate legacy format
+      if (!recipe.title || !recipe.checksum) {
+        return {
+          isValid: false,
+          error: 'invalid',
+          errorMessage: 'Cannot read this recipe',
+        };
+      }
+
+      // Validate checksum for legacy format
+      const recipeForChecksum = { ...recipe };
+      delete recipeForChecksum.checksum;
+      const calculatedChecksum = CryptoJS.MD5(JSON.stringify(recipeForChecksum)).toString();
+      
+      if (calculatedChecksum !== recipe.checksum) {
+        console.error('Checksum mismatch:', calculatedChecksum, 'vs', recipe.checksum);
+        return {
+          isValid: false,
+          error: 'corrupted',
+          errorMessage: MSG.CORRUPTED,
+        };
+      }
+    } else {
       return {
         isValid: false,
         error: 'invalid',
@@ -121,28 +326,15 @@ export const parseDeepLink = async (deepLink: string): Promise<ImportValidationR
       };
     }
 
-    const recipe = deepLinkData.recipe;
-
-    // Validate required fields
-    if (!recipe.title || !recipe.version || !recipe.checksum) {
-      return {
-        isValid: false,
-        error: 'invalid',
-        errorMessage: 'Cannot read this recipe',
-      };
-    }
-
-    // Validate checksum
-    const recipeForChecksum = { ...recipe };
-    delete recipeForChecksum.checksum;
-    const calculatedChecksum = CryptoJS.MD5(JSON.stringify(recipeForChecksum)).toString();
+    // Check version compatibility
+    const migrationInfo = await getMigrationInfo();
+    const currentVersion = migrationInfo.currentVersion;
     
-    if (calculatedChecksum !== recipe.checksum) {
-      console.error('Checksum mismatch:', calculatedChecksum, 'vs', recipe.checksum);
+    if (shareVersion > currentVersion) {
       return {
         isValid: false,
-        error: 'corrupted',
-        errorMessage: 'Link damaged, ask for reshare',
+        error: 'version_mismatch',
+        errorMessage: MSG.UPDATE_REQUIRED,
       };
     }
 
@@ -166,6 +358,8 @@ export const parseDeepLink = async (deepLink: string): Promise<ImportValidationR
     return {
       isValid: true,
       recipe,
+      shareVersion,
+      currentVersion,
     };
 
   } catch (error) {

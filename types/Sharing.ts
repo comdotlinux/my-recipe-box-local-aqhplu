@@ -21,11 +21,42 @@ export interface DeepLinkData {
   timestamp: number;
 }
 
+// New versioned share format
+export interface ShareData {
+  v: number; // Schema version
+  ts: number; // UTC epoch timestamp
+  app: string; // App version
+  recipe: {
+    // v1 (required)
+    id: string;
+    title: string;
+    ingredients: string;
+    instructions: string;
+    
+    // v2+ (optional)
+    cooking_method?: string | null;
+    source_type?: string;
+    
+    // v3+ (optional)
+    nutrition?: { calories?: number } | null;
+  };
+}
+
+// Backup metadata for versioning
+export interface BackupMetadata {
+  created: number; // UTC epoch
+  app: string; // App version
+  schema: number; // Schema version
+  count: number; // Recipe count
+}
+
 export interface ImportValidationResult {
   isValid: boolean;
-  error?: 'corrupted' | 'duplicate' | 'invalid' | 'size_limit';
+  error?: 'corrupted' | 'duplicate' | 'invalid' | 'size_limit' | 'version_mismatch';
   errorMessage?: string;
-  recipe?: ShareableRecipe;
+  recipe?: ShareableRecipe | any;
+  shareVersion?: number;
+  currentVersion?: number;
 }
 
 export interface ShareOptions {
@@ -33,4 +64,12 @@ export interface ShareOptions {
   includeQRCode: boolean;
   includeImage: boolean;
   includePDF: boolean;
+}
+
+// Version compatibility matrix
+export interface VersionCompatibility {
+  canImport: boolean;
+  requiresUpdate: boolean;
+  dataLoss: boolean;
+  message: string;
 }
