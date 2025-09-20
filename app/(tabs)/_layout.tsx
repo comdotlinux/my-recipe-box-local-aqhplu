@@ -4,6 +4,7 @@ import { colors } from '../../styles/commonStyles';
 import Icon from '../../components/Icon';
 import { View, TouchableOpacity, Platform } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Custom FAB component for the Add tab
 function AddTabButton({ children, onPress }: any) {
@@ -31,19 +32,21 @@ function AddTabButton({ children, onPress }: any) {
 }
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarInactiveTintColor: colors.text,
         tabBarStyle: {
           backgroundColor: colors.background,
           borderTopColor: colors.outline,
           borderTopWidth: 1,
-          paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-          paddingTop: 8,
-          height: Platform.OS === 'ios' ? 90 : 70,
+          paddingBottom: Math.max(insets.bottom, 8),
+          paddingTop: 12,
+          height: Math.max(insets.bottom + 65, 75),
           shadowColor: colors.shadow,
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
@@ -53,6 +56,7 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
+          marginTop: 4,
         },
         tabBarItemStyle: {
           paddingVertical: 4,

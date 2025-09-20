@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, Image, Animated, Pressable } from 'react-
 import { Recipe } from '../types/Recipe';
 import { commonStyles, colors, typography, spacing, borderRadius } from '../styles/commonStyles';
 import Icon from './Icon';
+import { getImageDisplayUri } from '../utils/imageUtils';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -17,21 +18,10 @@ export default function RecipeCard({
   recipe, 
   onPress, 
   showFavorite = true, 
-  viewMode = 'list',
+  viewMode = 'grid',
   index = 0 
 }: RecipeCardProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    // Stagger fade-in animation
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      delay: index * 100,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim, index]);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -47,254 +37,244 @@ export default function RecipeCard({
     }).start();
   };
 
-  const formatTime = (minutes?: number) => {
-    if (!minutes) return null;
+  const formatTime = (minutes?: number): string => {
+    if (!minutes) return '';
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
-  const getDifficultyColor = (difficulty?: string) => {
-    switch (difficulty?.toLowerCase()) {
-      case 'easy': return colors.success;
-      case 'medium': return colors.warning;
-      case 'hard': return colors.error;
+  const getDifficultyColor = (difficulty?: string): string => {
+    switch (difficulty) {
+      case 'Easy': return colors.success;
+      case 'Medium': return colors.warning;
+      case 'Hard': return colors.error;
       default: return colors.textSecondary;
     }
   };
 
-  if (viewMode === 'grid') {
+  // Extract image from notes (temporary solution until proper image storage)
+  const getRecipeImage = (): string | null => {
+    if (!recipe.notes) return null;
+    
+    const imageMatch = recipe.notes.match(/\[IMAGE:([^\]]+)\]/);
+    return imageMatch ? imageMatch[1] : null;
+  };
+
+  const recipeImage = getRecipeImage();
+
+  if (viewMode === 'list') {
     return (
-      <Animated.View
-        style={{
-          opacity: fadeAnim,
-          transform: [{ scale: scaleAnim }],
-          flex: 1,
-          margin: spacing.xs,
-        }}
-      >
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
         <Pressable
           onPress={onPress}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
-          style={[
-            commonStyles.card,
-            {
-              margin: 0,
-              borderRadius: borderRadius.xl,
-              overflow: 'hidden',
-              elevation: 2,
-              shadowColor: colors.shadow,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-            }
-          ]}
-        >
-          {/* Recipe Image with Parallax Effect */}
-          <View style={{
-            height: 120,
-            backgroundColor: colors.surfaceVariant,
-            justifyContent: 'center',
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: borderRadius.lg,
+            padding: spacing.md,
+            marginBottom: spacing.md,
+            flexDirection: 'row',
             alignItems: 'center',
-            position: 'relative',
+            shadowColor: colors.shadow,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+          }}
+        >
+          {/* Image */}
+          <View style={{
+            width: 80,
+            height: 80,
+            borderRadius: borderRadius.md,
+            backgroundColor: colors.surfaceVariant,
+            marginRight: spacing.md,
+            overflow: 'hidden',
           }}>
-            <Icon name="restaurant" size={32} color={colors.textSecondary} />
-            
-            {/* Favorite Icon Overlay */}
-            {showFavorite && recipe.is_favorite && (
+            {recipeImage ? (
+              <Image
+                source={{ uri: getImageDisplayUri(recipeImage) }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            ) : (
               <View style={{
-                position: 'absolute',
-                top: spacing.sm,
-                right: spacing.sm,
-                backgroundColor: colors.background,
-                borderRadius: borderRadius.full,
-                padding: spacing.xs,
-                shadowColor: colors.shadow,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-                elevation: 4,
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
               }}>
-                <Icon name="heart" size={16} color={colors.error} />
+                <Icon name="restaurant" size={24} color={colors.textSecondary} />
               </View>
             )}
           </View>
 
-          <View style={{ padding: spacing.md }}>
-            {/* Title */}
-            <Text 
-              style={[typography.titleMedium, { marginBottom: spacing.xs }]} 
-              numberOfLines={2}
-            >
-              {recipe.title}
-            </Text>
-
-            {/* Chips Row */}
-            <View style={{ flexDirection: 'row', marginBottom: spacing.sm, flexWrap: 'wrap' }}>
-              {recipe.prep_time && (
-                <View style={[
-                  commonStyles.chip, 
-                  { 
-                    backgroundColor: colors.primary + '20',
-                    marginBottom: spacing.xs,
-                  }
-                ]}>
-                  <Icon name="time-outline" size={12} color={colors.primary} />
-                  <Text style={[
-                    commonStyles.chipText, 
-                    { color: colors.primary, marginLeft: spacing.xs }
-                  ]}>
-                    {formatTime(recipe.prep_time)}
-                  </Text>
-                </View>
-              )}
-
-              {recipe.rating && (
-                <View style={[
-                  commonStyles.chip, 
-                  { 
-                    backgroundColor: colors.warning + '20',
-                    marginBottom: spacing.xs,
-                  }
-                ]}>
-                  <Icon name="star" size={12} color={colors.warning} />
-                  <Text style={[
-                    commonStyles.chipText, 
-                    { color: colors.warning, marginLeft: spacing.xs }
-                  ]}>
-                    {recipe.rating}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Description */}
-            {recipe.description && (
-              <Text
-                style={[typography.bodySmall, { color: colors.textSecondary }]}
-                numberOfLines={2}
-              >
-                {recipe.description}
-              </Text>
-            )}
-          </View>
-        </Pressable>
-      </Animated.View>
-    );
-  }
-
-  // List view (existing implementation with animations)
-  return (
-    <Animated.View
-      style={{
-        opacity: fadeAnim,
-        transform: [{ scale: scaleAnim }],
-      }}
-    >
-      <Pressable
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={[
-          commonStyles.card, 
-          { 
-            marginBottom: spacing.md,
-            borderRadius: borderRadius.xl,
-            elevation: 2,
-            shadowColor: colors.shadow,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-          }
-        ]}
-      >
-        <View style={commonStyles.row}>
-          {/* Recipe Image Placeholder */}
-          <View style={{
-            width: 80,
-            height: 80,
-            backgroundColor: colors.surfaceVariant,
-            borderRadius: borderRadius.lg,
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginRight: spacing.md,
-          }}>
-            <Icon name="restaurant" size={24} color={colors.textSecondary} />
-          </View>
-
-          {/* Recipe Info */}
+          {/* Content */}
           <View style={{ flex: 1 }}>
-            <View style={[commonStyles.spaceBetween, { marginBottom: spacing.xs }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <Text style={[typography.titleMedium, { flex: 1, marginRight: spacing.sm }]} numberOfLines={1}>
                 {recipe.title}
               </Text>
               {showFavorite && recipe.is_favorite && (
-                <Animated.View>
-                  <Icon name="heart" size={16} color={colors.error} />
-                </Animated.View>
+                <Icon name="heart" size={16} color={colors.primary} />
               )}
             </View>
 
             {recipe.description && (
-              <Text
-                style={[typography.bodySmall, { color: colors.textSecondary, marginBottom: spacing.xs }]}
-                numberOfLines={2}
-              >
+              <Text style={[typography.bodySmall, { 
+                color: colors.textSecondary, 
+                marginTop: spacing.xs 
+              }]} numberOfLines={2}>
                 {recipe.description}
               </Text>
             )}
 
-            {/* Recipe Meta */}
-            <View style={commonStyles.row}>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              marginTop: spacing.sm,
+              gap: spacing.md 
+            }}>
               {recipe.prep_time && (
-                <View style={[commonStyles.row, { marginRight: spacing.md }]}>
-                  <Icon name="time-outline" size={12} color={colors.textSecondary} />
-                  <Text style={[typography.labelSmall, { color: colors.textSecondary, marginLeft: spacing.xs }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="time-outline" size={14} color={colors.textSecondary} />
+                  <Text style={[typography.labelSmall, { 
+                    color: colors.textSecondary, 
+                    marginLeft: spacing.xs 
+                  }]}>
                     {formatTime(recipe.prep_time)}
                   </Text>
                 </View>
               )}
 
               {recipe.difficulty && (
-                <View style={[commonStyles.row, { marginRight: spacing.md }]}>
-                  <View style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: getDifficultyColor(recipe.difficulty),
-                    marginRight: spacing.xs,
-                  }} />
-                  <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>
+                <View style={{
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: 2,
+                  borderRadius: borderRadius.sm,
+                  backgroundColor: getDifficultyColor(recipe.difficulty) + '20',
+                }}>
+                  <Text style={[typography.labelSmall, { 
+                    color: getDifficultyColor(recipe.difficulty),
+                    fontSize: 10,
+                  }]}>
                     {recipe.difficulty}
                   </Text>
                 </View>
               )}
+            </View>
+          </View>
+        </Pressable>
+      </Animated.View>
+    );
+  }
 
-              {recipe.rating && (
-                <View style={commonStyles.row}>
-                  <Icon name="star" size={12} color={colors.warning} />
-                  <Text style={[typography.labelSmall, { color: colors.textSecondary, marginLeft: spacing.xs }]}>
-                    {recipe.rating}/5
+  // Grid view
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={{
+          backgroundColor: colors.surface,
+          borderRadius: borderRadius.lg,
+          overflow: 'hidden',
+          marginBottom: spacing.md,
+          shadowColor: colors.shadow,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 3,
+        }}
+      >
+        {/* Image */}
+        <View style={{
+          height: 140,
+          backgroundColor: colors.surfaceVariant,
+          position: 'relative',
+        }}>
+          {recipeImage ? (
+            <Image
+              source={{ uri: getImageDisplayUri(recipeImage) }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <Icon name="restaurant" size={32} color={colors.textSecondary} />
+            </View>
+          )}
+
+          {/* Favorite indicator */}
+          {showFavorite && recipe.is_favorite && (
+            <View style={{
+              position: 'absolute',
+              top: spacing.sm,
+              right: spacing.sm,
+              backgroundColor: colors.background + 'E6',
+              borderRadius: borderRadius.full,
+              padding: spacing.xs,
+            }}>
+              <Icon name="heart" size={16} color={colors.primary} />
+            </View>
+          )}
+        </View>
+
+        {/* Content */}
+        <View style={{ padding: spacing.md }}>
+          <Text style={typography.titleMedium} numberOfLines={1}>
+            {recipe.title}
+          </Text>
+
+          {recipe.description && (
+            <Text style={[typography.bodySmall, { 
+              color: colors.textSecondary, 
+              marginTop: spacing.xs 
+            }]} numberOfLines={2}>
+              {recipe.description}
+            </Text>
+          )}
+
+          <View style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: spacing.sm 
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              {recipe.prep_time && (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Icon name="time-outline" size={14} color={colors.textSecondary} />
+                  <Text style={[typography.labelSmall, { 
+                    color: colors.textSecondary, 
+                    marginLeft: spacing.xs 
+                  }]}>
+                    {formatTime(recipe.prep_time)}
                   </Text>
                 </View>
               )}
             </View>
 
-            {/* Tags */}
-            {recipe.tags && recipe.tags.length > 0 && (
-              <View style={[commonStyles.row, { marginTop: spacing.xs, flexWrap: 'wrap' }]}>
-                {recipe.tags.slice(0, 3).map((tag, index) => (
-                  <View key={index} style={[commonStyles.chip, { marginBottom: spacing.xs }]}>
-                    <Text style={commonStyles.chipText}>{tag}</Text>
-                  </View>
-                ))}
-                {recipe.tags.length > 3 && (
-                  <Text style={[typography.labelSmall, { color: colors.textSecondary }]}>
-                    +{recipe.tags.length - 3} more
-                  </Text>
-                )}
+            {recipe.difficulty && (
+              <View style={{
+                paddingHorizontal: spacing.sm,
+                paddingVertical: 2,
+                borderRadius: borderRadius.sm,
+                backgroundColor: getDifficultyColor(recipe.difficulty) + '20',
+              }}>
+                <Text style={[typography.labelSmall, { 
+                  color: getDifficultyColor(recipe.difficulty),
+                  fontSize: 10,
+                }]}>
+                  {recipe.difficulty}
+                </Text>
               </View>
             )}
           </View>

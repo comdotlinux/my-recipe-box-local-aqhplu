@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { router } from 'expo-router';
@@ -10,10 +10,13 @@ import { AppDispatch } from '../../store';
 import { createRecipe } from '../../store/slices/recipesSlice';
 import { Recipe } from '../../types/Recipe';
 import Icon from '../../components/Icon';
+import { saveImageToAppDirectory, getImageDisplayUri } from '../../utils/imageUtils';
 
 export default function AddRecipeScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const [activeTab, setActiveTab] = useState<'photo' | 'url' | 'manual'>('manual');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -42,17 +45,36 @@ export default function AddRecipeScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+    setIsProcessingImage(true);
+    
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    if (!result.canceled) {
-      console.log('Photo taken:', result.assets[0].uri);
-      // TODO: Handle image storage and processing
-      Alert.alert('Photo captured', 'Photo functionality will be implemented in the next phase.');
+      if (!result.canceled && result.assets[0]) {
+        console.log('Photo taken:', result.assets[0].uri);
+        const savedPath = await saveImageToAppDirectory(result.assets[0].uri);
+        
+        if (savedPath) {
+          setSelectedImage(savedPath);
+          // Auto-fill title if empty and we have an image
+          if (!formData.title.trim()) {
+            handleInputChange('title', 'New Recipe');
+          }
+          console.log('Photo processed and saved successfully');
+        } else {
+          Alert.alert('Error', 'Failed to save photo. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    } finally {
+      setIsProcessingImage(false);
     }
   };
 
@@ -65,22 +87,49 @@ export default function AddRecipeScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+    setIsProcessingImage(true);
 
-    if (!result.canceled) {
-      console.log('Image selected:', result.assets[0].uri);
-      // TODO: Handle image storage and processing
-      Alert.alert('Image selected', 'Image functionality will be implemented in the next phase.');
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        console.log('Image selected:', result.assets[0].uri);
+        const savedPath = await saveImageToAppDirectory(result.assets[0].uri);
+        
+        if (savedPath) {
+          setSelectedImage(savedPath);
+          // Auto-fill title if empty and we have an image
+          if (!formData.title.trim()) {
+            handleInputChange('title', 'New Recipe');
+          }
+          console.log('Image processed and saved successfully');
+        } else {
+          Alert.alert('Error', 'Failed to save image. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
+    } finally {
+      setIsProcessingImage(false);
     }
   };
 
+  const handleRemoveImage = () => {
+    console.log('Removing selected image');
+    setSelectedImage(null);
+  };
+
   const handleSaveRecipe = async () => {
-    console.log('Saving recipe...');
+    console.log('Saving recipe with data:', { 
+      title: formData.title, 
+      hasImage: !!selectedImage 
+    });
     
     if (!formData.title.trim()) {
       Alert.alert('Missing title', 'Please enter a recipe title.');
@@ -104,6 +153,13 @@ export default function AddRecipeScreen() {
         is_favorite: false,
         notes: formData.notes.trim() || undefined,
       };
+
+      // Add image path to notes for now (until we implement proper image storage in database)
+      if (selectedImage) {
+        const imageNote = `[IMAGE:${selectedImage}]`;
+        recipeData.notes = recipeData.notes ? `${recipeData.notes}\n\n${imageNote}` : imageNote;
+        console.log('Added image reference to recipe notes');
+      }
 
       await dispatch(createRecipe(recipeData)).unwrap();
       console.log('Recipe saved successfully');
@@ -148,32 +204,61 @@ export default function AddRecipeScreen() {
 
   const renderPhotoTab = () => (
     <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-      <Icon name="camera" size={64} color={colors.textSecondary} />
-      <Text style={[typography.titleMedium, { marginTop: spacing.md, marginBottom: spacing.sm }]}>
-        Add Recipe Photo
-      </Text>
-      <Text style={[typography.bodyMedium, { 
-        color: colors.textSecondary, 
-        textAlign: 'center',
-        marginBottom: spacing.lg 
-      }]}>
-        Take a photo or select from your gallery
-      </Text>
+      {selectedImage ? (
+        <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
+          <Image
+            source={{ uri: getImageDisplayUri(selectedImage) }}
+            style={{
+              width: 200,
+              height: 150,
+              borderRadius: borderRadius.md,
+              marginBottom: spacing.md,
+            }}
+            resizeMode="cover"
+          />
+          <TouchableOpacity
+            style={[buttonStyles.secondary, { paddingHorizontal: spacing.lg }]}
+            onPress={handleRemoveImage}
+          >
+            <Text style={[commonStyles.buttonText, { color: colors.text }]}>
+              Remove Image
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <Icon name="camera" size={64} color={colors.textSecondary} />
+          <Text style={[typography.titleMedium, { marginTop: spacing.md, marginBottom: spacing.sm }]}>
+            Add Recipe Photo
+          </Text>
+          <Text style={[typography.bodyMedium, { 
+            color: colors.textSecondary, 
+            textAlign: 'center',
+            marginBottom: spacing.lg 
+          }]}>
+            Take a photo or select from your gallery
+          </Text>
+        </>
+      )}
       
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
+      <View style={{ flexDirection: 'row', gap: spacing.md, width: '100%' }}>
         <TouchableOpacity
-          style={[commonStyles.button, { flex: 1 }]}
+          style={[commonStyles.button, { flex: 1, opacity: isProcessingImage ? 0.6 : 1 }]}
           onPress={handleTakePhoto}
+          disabled={isProcessingImage}
         >
-          <Text style={commonStyles.buttonText}>Take Photo</Text>
+          <Text style={commonStyles.buttonText}>
+            {isProcessingImage ? 'Processing...' : 'Take Photo'}
+          </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[buttonStyles.secondary, { flex: 1 }]}
+          style={[buttonStyles.secondary, { flex: 1, opacity: isProcessingImage ? 0.6 : 1 }]}
           onPress={handlePickImage}
+          disabled={isProcessingImage}
         >
           <Text style={[commonStyles.buttonText, { color: colors.text }]}>
-            Choose Photo
+            {isProcessingImage ? 'Processing...' : 'Choose Photo'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -205,6 +290,27 @@ export default function AddRecipeScreen() {
       <Text style={[typography.titleMedium, { marginBottom: spacing.md }]}>
         Recipe Details
       </Text>
+      
+      {/* Show selected image preview in manual tab too */}
+      {selectedImage && (
+        <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
+          <Image
+            source={{ uri: getImageDisplayUri(selectedImage) }}
+            style={{
+              width: 120,
+              height: 90,
+              borderRadius: borderRadius.md,
+              marginBottom: spacing.sm,
+            }}
+            resizeMode="cover"
+          />
+          <TouchableOpacity onPress={handleRemoveImage}>
+            <Text style={[typography.labelMedium, { color: colors.primary }]}>
+              Remove Image
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
       
       {/* Title */}
       <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
@@ -379,44 +485,60 @@ export default function AddRecipeScreen() {
 
   return (
     <SafeAreaView style={commonStyles.safeArea}>
-      <View style={commonStyles.container}>
-        {/* Header */}
-        <View style={{ padding: spacing.md, paddingBottom: spacing.sm }}>
-          <View style={[commonStyles.spaceBetween, { marginBottom: spacing.md }]}>
-            <Text style={typography.headlineMedium}>Add Recipe</Text>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Icon name="close" size={24} color={colors.text} />
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <View style={commonStyles.container}>
+          {/* Header */}
+          <View style={{ padding: spacing.md, paddingBottom: spacing.sm }}>
+            <View style={[commonStyles.spaceBetween, { marginBottom: spacing.md }]}>
+              <Text style={typography.headlineMedium}>Add Recipe</Text>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Icon name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Tab Buttons */}
+            <View style={{ flexDirection: 'row', marginBottom: spacing.md }}>
+              {renderTabButton('photo', 'Photo', 'camera')}
+              {renderTabButton('url', 'URL', 'link')}
+              {renderTabButton('manual', 'Manual', 'create')}
+            </View>
+          </View>
+
+          {/* Content */}
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ 
+              paddingHorizontal: spacing.md, 
+              paddingBottom: spacing.xl + 100 // Extra padding for bottom bar and save button
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            {activeTab === 'photo' && renderPhotoTab()}
+            {activeTab === 'url' && renderUrlTab()}
+            {activeTab === 'manual' && renderManualTab()}
+          </ScrollView>
+
+          {/* Save Button */}
+          <View style={{ 
+            padding: spacing.md,
+            paddingBottom: Platform.OS === 'ios' ? spacing.lg : spacing.md,
+            backgroundColor: colors.background,
+            borderTopWidth: 1,
+            borderTopColor: colors.outline,
+          }}>
+            <TouchableOpacity
+              style={[commonStyles.button, { width: '100%' }]}
+              onPress={handleSaveRecipe}
+            >
+              <Text style={commonStyles.buttonText}>Save Recipe</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Tab Buttons */}
-          <View style={{ flexDirection: 'row', marginBottom: spacing.md }}>
-            {renderTabButton('photo', 'Photo', 'camera')}
-            {renderTabButton('url', 'URL', 'link')}
-            {renderTabButton('manual', 'Manual', 'create')}
-          </View>
         </View>
-
-        {/* Content */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: spacing.xl }}
-        >
-          {activeTab === 'photo' && renderPhotoTab()}
-          {activeTab === 'url' && renderUrlTab()}
-          {activeTab === 'manual' && renderManualTab()}
-        </ScrollView>
-
-        {/* Save Button */}
-        <View style={{ padding: spacing.md }}>
-          <TouchableOpacity
-            style={[commonStyles.button, { width: '100%' }]}
-            onPress={handleSaveRecipe}
-          >
-            <Text style={commonStyles.buttonText}>Save Recipe</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
