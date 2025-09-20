@@ -1,7 +1,7 @@
 
 import { StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
-// Color palette
+// Color palette - consolidated single export
 export const colors = {
   // Primary colors
   primary: '#6750A4',
@@ -74,154 +74,13 @@ export const colors = {
   disabled: '#CAC4D0',
   border: '#E7E0EC',
   shadow: 'rgba(0, 0, 0, 0.1)',
+  
+  // Additional colors for compatibility
+  accent: '#64B5F6',
+  card: '#FFFFFF',
 };
 
-// Typography
-export const typography = {
-  // Display styles
-  displayLarge: {
-    fontSize: 57,
-    lineHeight: 64,
-    fontWeight: '400' as const,
-    letterSpacing: -0.25,
-  },
-  displayMedium: {
-    fontSize: 45,
-    lineHeight: 52,
-    fontWeight: '400' as const,
-    letterSpacing: 0,
-  },
-  displaySmall: {
-    fontSize: 36,
-    lineHeight: 44,
-    fontWeight: '400' as const,
-    letterSpacing: 0,
-  },
-
-  // Headline styles
-  headlineLarge: {
-    fontSize: 32,
-    lineHeight: 40,
-    fontWeight: '400' as const,
-    letterSpacing: 0,
-  },
-  headlineMedium: {
-    fontSize: 28,
-    lineHeight: 36,
-    fontWeight: '400' as const,
-    letterSpacing: 0,
-  },
-  headlineSmall: {
-    fontSize: 24,
-    lineHeight: 32,
-    fontWeight: '400' as const,
-    letterSpacing: 0,
-  },
-
-  // Title styles
-  titleLarge: {
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '400' as const,
-    letterSpacing: 0,
-  },
-  titleMedium: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '500' as const,
-    letterSpacing: 0.15,
-  },
-  titleSmall: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '500' as const,
-    letterSpacing: 0.1,
-  },
-
-  // Label styles
-  labelLarge: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '500' as const,
-    letterSpacing: 0.1,
-  },
-  labelMedium: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '500' as const,
-    letterSpacing: 0.5,
-  },
-  labelSmall: {
-    fontSize: 11,
-    lineHeight: 16,
-    fontWeight: '500' as const,
-    letterSpacing: 0.5,
-  },
-
-  // Body styles
-  bodyLarge: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '400' as const,
-    letterSpacing: 0.5,
-  },
-  bodyMedium: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '400' as const,
-    letterSpacing: 0.25,
-  },
-  bodySmall: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '400' as const,
-    letterSpacing: 0.4,
-  },
-
-  // Legacy styles for compatibility
-  h1: {
-    fontSize: 32,
-    lineHeight: 40,
-    fontWeight: '700' as const,
-  },
-  h2: {
-    fontSize: 28,
-    lineHeight: 36,
-    fontWeight: '600' as const,
-  },
-  h3: {
-    fontSize: 24,
-    lineHeight: 32,
-    fontWeight: '600' as const,
-  },
-  h4: {
-    fontSize: 20,
-    lineHeight: 28,
-    fontWeight: '600' as const,
-  },
-  h5: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: '600' as const,
-  },
-  h6: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '600' as const,
-  },
-  body: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '400' as const,
-  },
-  caption: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '400' as const,
-  },
-};
-
-// Spacing
+// Spacing - consolidated single export
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -231,7 +90,7 @@ export const spacing = {
   xxl: 48,
 };
 
-// Border radius
+// Border radius - consolidated single export
 export const borderRadius = {
   xs: 4,
   sm: 8,
@@ -241,23 +100,191 @@ export const borderRadius = {
   full: 9999,
 };
 
-// Button styles
-export const buttonStyles = {
+// Typography - consolidated single export
+export const typography = StyleSheet.create({
+  // Display styles
+  displayLarge: {
+    fontSize: 57,
+    lineHeight: 64,
+    fontWeight: '400',
+    letterSpacing: -0.25,
+    color: colors.text,
+  },
+  displayMedium: {
+    fontSize: 45,
+    lineHeight: 52,
+    fontWeight: '400',
+    letterSpacing: 0,
+    color: colors.text,
+  },
+  displaySmall: {
+    fontSize: 36,
+    lineHeight: 44,
+    fontWeight: '400',
+    letterSpacing: 0,
+    color: colors.text,
+  },
+
+  // Headline styles
+  headlineLarge: {
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: '400',
+    letterSpacing: 0,
+    color: colors.text,
+  },
+  headlineMedium: {
+    fontSize: 28,
+    lineHeight: 36,
+    fontWeight: '400',
+    letterSpacing: 0,
+    color: colors.text,
+  },
+  headlineSmall: {
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: '400',
+    letterSpacing: 0,
+    color: colors.text,
+  },
+
+  // Title styles
+  titleLarge: {
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '400',
+    letterSpacing: 0,
+    color: colors.text,
+  },
+  titleMedium: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '500',
+    letterSpacing: 0.15,
+    color: colors.text,
+  },
+  titleSmall: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+    letterSpacing: 0.1,
+    color: colors.text,
+  },
+
+  // Label styles
+  labelLarge: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+    letterSpacing: 0.1,
+    color: colors.text,
+  },
+  labelMedium: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+    color: colors.text,
+  },
+  labelSmall: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+    color: colors.text,
+  },
+
+  // Body styles
+  bodyLarge: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '400',
+    letterSpacing: 0.5,
+    color: colors.text,
+  },
+  bodyMedium: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '400',
+    letterSpacing: 0.25,
+    color: colors.text,
+  },
+  bodySmall: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+    letterSpacing: 0.4,
+    color: colors.text,
+  },
+
+  // Legacy styles for compatibility
+  h1: {
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  h2: {
+    fontSize: 28,
+    lineHeight: 36,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  h3: {
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  h4: {
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  h5: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  h6: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  body: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '400',
+    color: colors.text,
+  },
+  caption: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+    color: colors.text,
+  },
+});
+
+// Button styles - consolidated single export
+export const buttonStyles = StyleSheet.create({
   primary: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   secondary: {
     backgroundColor: colors.secondaryContainer,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   outline: {
     backgroundColor: 'transparent',
@@ -266,12 +293,17 @@ export const buttonStyles = {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-};
+  text: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+});
 
-// Common styles
+// Common styles - consolidated single export
 export const commonStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -281,7 +313,16 @@ export const commonStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+  },
   centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -291,6 +332,11 @@ export const commonStyles = StyleSheet.create({
   },
   column: {
     flexDirection: 'column',
+  },
+  spaceBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   card: {
     backgroundColor: colors.surface,
@@ -306,6 +352,19 @@ export const commonStyles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  fab: {
+    position: 'absolute',
+    bottom: spacing.md,
+    right: spacing.md,
+    backgroundColor: colors.primary,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    boxShadow: `0px 4px 12px ${colors.shadow}`,
+    elevation: 6,
+  },
   input: {
     backgroundColor: colors.surfaceContainer,
     borderRadius: borderRadius.sm,
@@ -319,25 +378,56 @@ export const commonStyles = StyleSheet.create({
     borderColor: colors.primary,
     borderWidth: 2,
   },
+  searchBar: {
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+  },
   button: {
-    ...buttonStyles.primary,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonSecondary: {
-    ...buttonStyles.secondary,
+    backgroundColor: colors.secondaryContainer,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonOutline: {
-    ...buttonStyles.outline,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.outline,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
-    ...typography.labelLarge,
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 20,
     color: colors.onPrimary,
   },
   buttonTextSecondary: {
-    ...typography.labelLarge,
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 20,
     color: colors.onSecondaryContainer,
   },
   buttonTextOutline: {
-    ...typography.labelLarge,
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 20,
     color: colors.primary,
   },
   shadow: {
@@ -355,219 +445,6 @@ export const commonStyles = StyleSheet.create({
     backgroundColor: colors.outlineVariant,
     marginVertical: spacing.md,
   },
-});
-
-export const colors = {
-  primary: '#1976D2',      // Material Blue
-  primaryContainer: '#E3F2FD',
-  secondary: '#0D47A1',    // Darker Blue
-  accent: '#64B5F6',       // Light Blue
-  background: '#FFFFFF',   // White background for light theme
-  surface: '#F5F5F5',      // Light grey surface
-  surfaceVariant: '#E0E0E0',
-  text: '#212121',         // Dark text for light theme
-  textSecondary: '#757575',
-  outline: '#BDBDBD',
-  error: '#D32F2F',
-  success: '#388E3C',
-  warning: '#F57C00',
-  card: '#FFFFFF',
-  shadow: 'rgba(0, 0, 0, 0.1)',
-};
-
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
-};
-
-export const borderRadius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  full: 9999,
-};
-
-export const typography = StyleSheet.create({
-  displayLarge: {
-    fontSize: 57,
-    fontWeight: '400',
-    lineHeight: 64,
-    color: colors.text,
-  },
-  displayMedium: {
-    fontSize: 45,
-    fontWeight: '400',
-    lineHeight: 52,
-    color: colors.text,
-  },
-  displaySmall: {
-    fontSize: 36,
-    fontWeight: '400',
-    lineHeight: 44,
-    color: colors.text,
-  },
-  headlineLarge: {
-    fontSize: 32,
-    fontWeight: '400',
-    lineHeight: 40,
-    color: colors.text,
-  },
-  headlineMedium: {
-    fontSize: 28,
-    fontWeight: '400',
-    lineHeight: 36,
-    color: colors.text,
-  },
-  headlineSmall: {
-    fontSize: 24,
-    fontWeight: '400',
-    lineHeight: 32,
-    color: colors.text,
-  },
-  titleLarge: {
-    fontSize: 22,
-    fontWeight: '500',
-    lineHeight: 28,
-    color: colors.text,
-  },
-  titleMedium: {
-    fontSize: 16,
-    fontWeight: '500',
-    lineHeight: 24,
-    color: colors.text,
-  },
-  titleSmall: {
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 20,
-    color: colors.text,
-  },
-  bodyLarge: {
-    fontSize: 16,
-    fontWeight: '400',
-    lineHeight: 24,
-    color: colors.text,
-  },
-  bodyMedium: {
-    fontSize: 14,
-    fontWeight: '400',
-    lineHeight: 20,
-    color: colors.text,
-  },
-  bodySmall: {
-    fontSize: 12,
-    fontWeight: '400',
-    lineHeight: 16,
-    color: colors.text,
-  },
-  labelLarge: {
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 20,
-    color: colors.text,
-  },
-  labelMedium: {
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
-    color: colors.text,
-  },
-  labelSmall: {
-    fontSize: 11,
-    fontWeight: '500',
-    lineHeight: 16,
-    color: colors.text,
-  },
-});
-
-export const commonStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    marginVertical: spacing.sm,
-    boxShadow: `0px 2px 8px ${colors.shadow}`,
-    elevation: 2,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: spacing.md,
-    right: spacing.md,
-    backgroundColor: colors.primary,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    boxShadow: `0px 4px 12px ${colors.shadow}`,
-    elevation: 6,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    ...typography.labelLarge,
-    color: colors.background,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.outline,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 16,
-    color: colors.text,
-    backgroundColor: colors.background,
-  },
-  searchBar: {
-    backgroundColor: colors.surfaceVariant,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginHorizontal: spacing.md,
-    marginVertical: spacing.sm,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.outline,
-    marginVertical: spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  spaceBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   chip: {
     backgroundColor: colors.surfaceVariant,
     paddingHorizontal: spacing.md,
@@ -576,29 +453,9 @@ export const commonStyles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   chipText: {
-    ...typography.labelSmall,
+    fontSize: 11,
+    fontWeight: '500',
+    lineHeight: 16,
     color: colors.text,
-  },
-});
-
-export const buttonStyles = StyleSheet.create({
-  primary: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.full,
-  },
-  secondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.full,
-  },
-  text: {
-    backgroundColor: 'transparent',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
   },
 });
