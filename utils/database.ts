@@ -1,6 +1,7 @@
 
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SQLite from 'expo-sqlite';
 import { Recipe, RecipeImage, UserPreference, SchemaInfo } from '../types/Recipe';
 
 const DATABASE_NAME = 'myrecipebox.db';
@@ -26,7 +27,6 @@ export const initDatabase = async (): Promise<any> => {
       db = { isWebFallback: true };
     } else {
       // Use SQLite for native platforms
-      const SQLite = require('expo-sqlite');
       db = await SQLite.openDatabaseAsync(DATABASE_NAME);
       console.log('Database opened successfully');
       await runMigrations(db);
