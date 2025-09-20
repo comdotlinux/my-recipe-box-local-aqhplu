@@ -10,11 +10,12 @@ export interface ImageInfo {
 }
 
 export const createImagesDirectory = async (): Promise<string> => {
-  if (!FileSystem.documentDirectory) {
+  const documentDirectory = FileSystem.documentDirectory;
+  if (!documentDirectory) {
     throw new Error('Document directory not available');
   }
 
-  const imagesDir = `${FileSystem.documentDirectory}images/`;
+  const imagesDir = `${documentDirectory}images/`;
   const dirInfo = await FileSystem.getInfoAsync(imagesDir);
   
   if (!dirInfo.exists) {
