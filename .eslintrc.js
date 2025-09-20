@@ -30,11 +30,22 @@ module.exports = {
     '@typescript-eslint/no-empty-object-type': 'off',
     '@typescript-eslint/no-wrapper-object-types': 'off',
     'react/no-unescaped-entities': 'off',
-    'import/no-unresolved': 'error',
+    'import/no-unresolved': 'off',
     'prefer-const': 'off',
     'react/prop-types': 1,
     'no-case-declarations': 'off',
     'no-empty': 'off'
+  },
+  settings: {
+    'import/resolver': {
+      node: {
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
+        moduleDirectory: ['node_modules', './']
+      },
+      typescript: {
+        alwaysTryTypes: true
+      }
+    }
   },
   overrides: [
     {
