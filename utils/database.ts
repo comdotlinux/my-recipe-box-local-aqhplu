@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SQLite from 'expo-sqlite';
 import { Recipe, RecipeImage, UserPreference, SchemaInfo } from '../types/Recipe';
+import { MigrationSystem } from './migrationSystem';
 
 const DATABASE_NAME = 'myrecipebox.db';
 const CURRENT_SCHEMA_VERSION = 1;
@@ -67,19 +68,19 @@ const runMigrations = async (database: any): Promise<void> => {
   console.log('Running database migrations...');
   
   try {
-    // Check current schema version
-    let currentVersion = 0;
-    try {
-      const result = await database.getFirstAsync<{ version: number }>('SELECT version FROM schema_info ORDER BY version DESC LIMIT 1');
-      currentVersion = result?.version || 0;
-    } catch (error) {
-      console.log('Schema info table does not exist, starting from version 0');
+    const migrationSystem = new MigrationSystem(database);
+    const results = await migrationSystem.runMigrations();
+    
+    // Check if any migrations failed
+    const failedMigrations = results.filter(r => !r.success);
+    if (failedMigrations.length > 0) {
+      throw new Error(`${failedMigrations.length} migrations failed`);
     }
 
-    console.log(`Current schema version: ${currentVersion}`);
-
-    if (currentVersion < 1) {
-      await migrateToV1(database);
+    // Validate schema after migrations
+    const validation = await migrationSystem.validateSchema();
+    if (!validation.valid) {
+      console.warn('Schema validation warnings:', validation.errors);
     }
 
     console.log('Database migrations completed successfully');
@@ -89,82 +90,11 @@ const runMigrations = async (database: any): Promise<void> => {
   }
 };
 
+// Legacy migration function - now handled by MigrationSystem
+// Kept for reference and potential rollback scenarios
 const migrateToV1 = async (database: any): Promise<void> => {
-  console.log('Migrating to schema version 1...');
-  
-  await database.execAsync(`
-    -- Version tracking
-    CREATE TABLE IF NOT EXISTS schema_info (
-      version INTEGER PRIMARY KEY,
-      applied_at INTEGER NOT NULL,
-      app_version TEXT
-    );
-
-    -- Recipes table
-    CREATE TABLE IF NOT EXISTS recipes (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      description TEXT,
-      ingredients TEXT,
-      instructions TEXT,
-      source_url TEXT,
-      servings INTEGER,
-      prep_time INTEGER,
-      cook_time INTEGER,
-      difficulty TEXT,
-      cuisine TEXT,
-      tags TEXT,
-      rating INTEGER,
-      is_favorite BOOLEAN DEFAULT 0,
-      notes TEXT,
-      created_at INTEGER DEFAULT (strftime('%s','now')),
-      modified_at INTEGER DEFAULT (strftime('%s','now'))
-    );
-
-    -- Recipe images table
-    CREATE TABLE IF NOT EXISTS recipe_images (
-      id TEXT PRIMARY KEY,
-      recipe_id TEXT,
-      image_path TEXT,
-      thumbnail_path TEXT,
-      position INTEGER DEFAULT 0,
-      FOREIGN KEY (recipe_id) REFERENCES recipes (id) ON DELETE CASCADE
-    );
-
-    -- User preferences table
-    CREATE TABLE IF NOT EXISTS user_preferences (
-      key TEXT PRIMARY KEY,
-      value TEXT
-    );
-
-    -- Full-text search virtual table
-    CREATE VIRTUAL TABLE IF NOT EXISTS recipes_fts USING fts5(
-      title, description, ingredients, instructions,
-      content=recipes
-    );
-
-    -- Triggers to keep FTS table in sync
-    CREATE TRIGGER IF NOT EXISTS recipes_fts_insert AFTER INSERT ON recipes BEGIN
-      INSERT INTO recipes_fts(rowid, title, description, ingredients, instructions)
-      VALUES (new.rowid, new.title, new.description, new.ingredients, new.instructions);
-    END;
-
-    CREATE TRIGGER IF NOT EXISTS recipes_fts_delete AFTER DELETE ON recipes BEGIN
-      DELETE FROM recipes_fts WHERE rowid = old.rowid;
-    END;
-
-    CREATE TRIGGER IF NOT EXISTS recipes_fts_update AFTER UPDATE ON recipes BEGIN
-      DELETE FROM recipes_fts WHERE rowid = old.rowid;
-      INSERT INTO recipes_fts(rowid, title, description, ingredients, instructions)
-      VALUES (new.rowid, new.title, new.description, new.ingredients, new.instructions);
-    END;
-
-    -- Insert schema version
-    INSERT OR REPLACE INTO schema_info (version, applied_at, app_version)
-    VALUES (1, strftime('%s','now'), '1.0.0');
-  `);
-
-  console.log('Schema version 1 migration completed');
+  console.log('Legacy migration function - should not be called directly');
+  console.log('Migrations are now handled by MigrationSystem class');
 };
 
 // Web-specific AsyncStorage operations
@@ -450,4 +380,70 @@ export const setUserPreference = async (key: string, value: string): Promise<voi
 // Utility function to generate unique IDs
 const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
+};
+
+// Migration utilities for debugging and monitoring
+export const getMigrationInfo = async (): Promise<{
+  currentVersion: number;
+  latestVersion: number;
+  history: any[];
+  isValid: boolean;
+  errors: string[];
+}> => {
+  const database = await initDatabase();
+  
+  if (isWebFallback) {
+    return {
+      currentVersion: 1,
+      latestVersion: 1,
+      history: [],
+      isValid: true,
+      errors: []
+    };
+  }
+
+  const migrationSystem = new MigrationSystem(database);
+  const currentVersion = await migrationSystem.getCurrentVersion();
+  const latestVersion = await migrationSystem.getLatestVersion();
+  const history = await migrationSystem.getMigrationHistory();
+  const validation = await migrationSystem.validateSchema();
+
+  return {
+    currentVersion,
+    latestVersion,
+    history,
+    isValid: validation.valid,
+    errors: validation.errors
+  };
+};
+
+export const validateDatabaseSchema = async (): Promise<{ valid: boolean; errors: string[] }> => {
+  const database = await initDatabase();
+  
+  if (isWebFallback) {
+    return { valid: true, errors: [] };
+  }
+
+  const migrationSystem = new MigrationSystem(database);
+  return await migrationSystem.validateSchema();
+};
+
+export const resetDatabase = async (): Promise<void> => {
+  console.log('Resetting database...');
+  
+  if (isWebFallback) {
+    // Clear AsyncStorage
+    await AsyncStorage.multiRemove(['recipes', 'user_preferences', 'schema_version']);
+    await initWebDatabase();
+  } else {
+    // For SQLite, we would need to close and delete the database file
+    // This is more complex and should be done carefully
+    throw new Error('Database reset for SQLite not implemented - use app data clearing instead');
+  }
+  
+  // Reset the database instance
+  db = null;
+  isWebFallback = false;
+  
+  console.log('Database reset completed');
 };

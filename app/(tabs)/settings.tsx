@@ -10,12 +10,14 @@ import { setTheme } from '../../store/slices/uiSlice';
 import { getUserPreference, setUserPreference } from '../../utils/database';
 import Icon from '../../components/Icon';
 import PlatformNotice from '../../components/PlatformNotice';
+import DatabaseTestPanel from '../../components/DatabaseTestPanel';
 
 export default function SettingsScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const { theme } = useSelector((state: RootState) => state.ui);
   const [notifications, setNotifications] = useState(false);
   const [autoBackup, setAutoBackup] = useState(false);
+  const [showTestPanel, setShowTestPanel] = useState(false);
 
   useEffect(() => {
     loadPreferences();
@@ -257,6 +259,22 @@ export default function SettingsScreen() {
             )}
           </View>
 
+          {/* Developer Tools */}
+          {__DEV__ && (
+            <View style={{ marginBottom: spacing.lg }}>
+              <Text style={[typography.titleLarge, { marginBottom: spacing.md }]}>
+                Developer Tools
+              </Text>
+              
+              {renderSettingItem(
+                'Database Tests',
+                'Run database migration and functionality tests',
+                'flask',
+                () => setShowTestPanel(true)
+              )}
+            </View>
+          )}
+
           {/* About */}
           <View style={{ marginBottom: spacing.xl }}>
             <Text style={[typography.titleLarge, { marginBottom: spacing.md }]}>
@@ -285,6 +303,11 @@ export default function SettingsScreen() {
           </View>
         </ScrollView>
       </View>
+
+      <DatabaseTestPanel 
+        isVisible={showTestPanel}
+        onClose={() => setShowTestPanel(false)}
+      />
     </SafeAreaView>
   );
 }
