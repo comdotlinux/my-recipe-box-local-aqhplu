@@ -8,12 +8,17 @@ import { commonStyles, colors, typography, spacing, borderRadius } from '../../s
 import { RootState, AppDispatch } from '../../store';
 import { loadRecipe, toggleFavorite, deleteRecipe } from '../../store/slices/recipesSlice';
 import Icon from '../../components/Icon';
+import ShareOptionsSheet from '../../components/ShareOptionsSheet';
+import QRCodeSheet from '../../components/QRCodeSheet';
 
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const dispatch = useDispatch<AppDispatch>();
   const { currentRecipe, loading } = useSelector((state: RootState) => state.recipes);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'instructions' | 'notes'>('ingredients');
+  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [showQRSheet, setShowQRSheet] = useState(false);
+  const [qrData, setQRData] = useState<{ deepLink: string; recipe: any } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -56,19 +61,14 @@ export default function RecipeDetailScreen() {
     );
   };
 
-  const handleShareRecipe = async () => {
+  const handleShareRecipe = () => {
     if (!currentRecipe) return;
+    setShowShareSheet(true);
+  };
 
-    try {
-      const shareContent = `${currentRecipe.title}\n\n${currentRecipe.description || ''}\n\nShared from MyRecipeBox Local`;
-      
-      await Share.share({
-        message: shareContent,
-        title: currentRecipe.title,
-      });
-    } catch (error) {
-      console.error('Failed to share recipe:', error);
-    }
+  const handleShowQRCode = (qrCodeData: { deepLink: string; recipe: any }) => {
+    setQRData(qrCodeData);
+    setShowQRSheet(true);
   };
 
   const formatTime = (minutes?: number) => {
@@ -403,6 +403,21 @@ export default function RecipeDetailScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
+
+        {/* Share Options Sheet */}
+        <ShareOptionsSheet
+          recipe={currentRecipe}
+          isVisible={showShareSheet}
+          onClose={() => setShowShareSheet(false)}
+          onShowQRCode={handleShowQRCode}
+        />
+
+        {/* QR Code Sheet */}
+        <QRCodeSheet
+          qrData={qrData}
+          isVisible={showQRSheet}
+          onClose={() => setShowQRSheet(false)}
+        />
       </View>
     </SafeAreaView>
   );

@@ -7,21 +7,21 @@ import { router } from 'expo-router';
 import { commonStyles, colors, typography, spacing } from '../../styles/commonStyles';
 import { RootState, AppDispatch } from '../../store';
 import { loadRecentRecipes, loadFavorites } from '../../store/slices/recipesSlice';
-import RecipeCard from '../../components/RecipeCard';
 import Icon from '../../components/Icon';
+import RecipeCard from '../../components/RecipeCard';
 
 export default function HomeScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const { recentRecipes, favorites, loading } = useSelector((state: RootState) => state.recipes);
 
   useEffect(() => {
-    console.log('HomeScreen mounted, loading data...');
+    console.log('Home screen mounted, loading data');
     dispatch(loadRecentRecipes(5));
     dispatch(loadFavorites());
   }, [dispatch]);
 
   const handleRefresh = () => {
-    console.log('Refreshing home screen data...');
+    console.log('Refreshing home screen data');
     dispatch(loadRecentRecipes(5));
     dispatch(loadFavorites());
   };
@@ -36,152 +36,178 @@ export default function HomeScreen() {
     router.push('/(tabs)/add');
   };
 
+  const navigateToScanner = () => {
+    console.log('Navigating to QR scanner');
+    router.push('/scanner');
+  };
+
   return (
     <SafeAreaView style={commonStyles.safeArea}>
-      <ScrollView
-        style={commonStyles.container}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
-        }
-      >
+      <View style={commonStyles.container}>
         {/* Header */}
         <View style={{ padding: spacing.md, paddingBottom: spacing.sm }}>
-          <Text style={[typography.headlineMedium, { marginBottom: spacing.xs }]}>
-            My Recipe Box
-          </Text>
-          <Text style={[typography.bodyMedium, { color: colors.textSecondary }]}>
-            Welcome back! Here are your latest recipes.
-          </Text>
-        </View>
-
-        {/* Quick Stats */}
-        <View style={{
-          flexDirection: 'row',
-          paddingHorizontal: spacing.md,
-          marginBottom: spacing.lg,
-        }}>
-          <View style={[commonStyles.card, { flex: 1, marginRight: spacing.sm, alignItems: 'center' }]}>
-            <Text style={[typography.headlineSmall, { color: colors.primary }]}>
-              {recentRecipes.length}
-            </Text>
-            <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
-              Recent
-            </Text>
-          </View>
-          <View style={[commonStyles.card, { flex: 1, marginLeft: spacing.sm, alignItems: 'center' }]}>
-            <Text style={[typography.headlineSmall, { color: colors.primary }]}>
-              {favorites.length}
-            </Text>
-            <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
-              Favorites
-            </Text>
-          </View>
-        </View>
-
-        {/* Recent Recipes */}
-        <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.lg }}>
           <View style={[commonStyles.spaceBetween, { marginBottom: spacing.md }]}>
-            <Text style={typography.titleLarge}>Recent Recipes</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/browse')}>
-              <Text style={[typography.labelLarge, { color: colors.primary }]}>
-                View All
-              </Text>
-            </TouchableOpacity>
-          </View>
-          
-          {recentRecipes.length === 0 ? (
-            <View style={[commonStyles.card, commonStyles.centerContent, { minHeight: 120 }]}>
-              <Icon name="restaurant" size={32} color={colors.textSecondary} />
-              <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: spacing.sm }]}>
-                No recipes yet
-              </Text>
+            <Text style={typography.headlineMedium}>My Recipes</Text>
+            
+            <View style={commonStyles.row}>
               <TouchableOpacity
-                style={[commonStyles.button, { marginTop: spacing.md }]}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: colors.primary + '20',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginRight: spacing.sm,
+                }}
+                onPress={navigateToScanner}
+              >
+                <Icon name="qr-code" size={20} color={colors.primary} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: colors.primary,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
                 onPress={navigateToAdd}
               >
-                <Text style={commonStyles.buttonText}>Add Your First Recipe</Text>
+                <Icon name="add" size={20} color={colors.background} />
               </TouchableOpacity>
             </View>
-          ) : (
-            recentRecipes.map((recipe) => (
-              <RecipeCard
-                key={recipe.id}
-                recipe={recipe}
-                onPress={() => navigateToRecipe(recipe.id)}
-              />
-            ))
-          )}
+          </View>
         </View>
 
-        {/* Favorites */}
-        {favorites.length > 0 && (
+        <ScrollView 
+          style={{ flex: 1 }} 
+          contentContainerStyle={{ paddingBottom: spacing.xl }}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
+          }
+        >
+          {/* Quick Stats */}
+          <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.lg }}>
+            <View style={[commonStyles.row, { gap: spacing.md }]}>
+              <View style={[commonStyles.card, { flex: 1, alignItems: 'center' }]}>
+                <Text style={[typography.headlineSmall, { color: colors.primary }]}>
+                  {recentRecipes.length}
+                </Text>
+                <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
+                  Total Recipes
+                </Text>
+              </View>
+              
+              <View style={[commonStyles.card, { flex: 1, alignItems: 'center' }]}>
+                <Text style={[typography.headlineSmall, { color: colors.error }]}>
+                  {favorites.length}
+                </Text>
+                <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
+                  Favorites
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Recent Recipes */}
           <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.lg }}>
             <View style={[commonStyles.spaceBetween, { marginBottom: spacing.md }]}>
-              <Text style={typography.titleLarge}>Favorites</Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/collections')}>
-                <Text style={[typography.labelLarge, { color: colors.primary }]}>
+              <Text style={typography.titleLarge}>Recent Recipes</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/browse')}>
+                <Text style={[typography.labelMedium, { color: colors.primary }]}>
                   View All
                 </Text>
               </TouchableOpacity>
             </View>
-            
-            {favorites.slice(0, 3).map((recipe) => (
-              <RecipeCard
-                key={recipe.id}
-                recipe={recipe}
-                onPress={() => navigateToRecipe(recipe.id)}
-              />
-            ))}
-          </View>
-        )}
 
-        {/* Quick Actions */}
-        <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.xl }}>
-          <Text style={[typography.titleLarge, { marginBottom: spacing.md }]}>
-            Quick Actions
-          </Text>
-          
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <TouchableOpacity
-              style={[commonStyles.card, { flex: 1, alignItems: 'center', paddingVertical: spacing.lg }]}
-              onPress={navigateToAdd}
-            >
-              <Icon name="camera" size={24} color={colors.primary} />
-              <Text style={[typography.labelMedium, { marginTop: spacing.xs }]}>
-                Photo Recipe
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[commonStyles.card, { flex: 1, alignItems: 'center', paddingVertical: spacing.lg }]}
-              onPress={navigateToAdd}
-            >
-              <Icon name="link" size={24} color={colors.primary} />
-              <Text style={[typography.labelMedium, { marginTop: spacing.xs }]}>
-                From URL
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[commonStyles.card, { flex: 1, alignItems: 'center', paddingVertical: spacing.lg }]}
-              onPress={navigateToAdd}
-            >
-              <Icon name="create" size={24} color={colors.primary} />
-              <Text style={[typography.labelMedium, { marginTop: spacing.xs }]}>
-                Manual Entry
-              </Text>
-            </TouchableOpacity>
+            {recentRecipes.length > 0 ? (
+              <View>
+                {recentRecipes.slice(0, 3).map((recipe) => (
+                  <RecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    onPress={() => navigateToRecipe(recipe.id)}
+                    showFavorite
+                  />
+                ))}
+              </View>
+            ) : (
+              <View style={[commonStyles.card, { alignItems: 'center', padding: spacing.xl }]}>
+                <Icon name="restaurant" size={48} color={colors.textSecondary} />
+                <Text style={[typography.titleMedium, { 
+                  marginTop: spacing.md, 
+                  marginBottom: spacing.sm,
+                  textAlign: 'center' 
+                }]}>
+                  No Recipes Yet
+                </Text>
+                <Text style={[typography.bodyMedium, { 
+                  color: colors.textSecondary, 
+                  textAlign: 'center',
+                  marginBottom: spacing.lg 
+                }]}>
+                  Start building your recipe collection by adding your first recipe or scanning a QR code.
+                </Text>
+                <View style={[commonStyles.row, { gap: spacing.md }]}>
+                  <TouchableOpacity
+                    style={[commonStyles.card, { 
+                      backgroundColor: colors.primary,
+                      paddingHorizontal: spacing.lg 
+                    }]}
+                    onPress={navigateToAdd}
+                  >
+                    <Text style={[typography.labelMedium, { color: colors.background }]}>
+                      Add Recipe
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[commonStyles.card, { 
+                      backgroundColor: colors.surface,
+                      borderColor: colors.outline,
+                      borderWidth: 1,
+                      paddingHorizontal: spacing.lg 
+                    }]}
+                    onPress={navigateToScanner}
+                  >
+                    <Text style={[typography.labelMedium, { color: colors.text }]}>
+                      Scan QR Code
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
-        </View>
-      </ScrollView>
 
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={commonStyles.fab}
-        onPress={navigateToAdd}
-      >
-        <Icon name="add" size={24} color={colors.background} />
-      </TouchableOpacity>
+          {/* Favorites */}
+          {favorites.length > 0 && (
+            <View style={{ paddingHorizontal: spacing.md }}>
+              <View style={[commonStyles.spaceBetween, { marginBottom: spacing.md }]}>
+                <Text style={typography.titleLarge}>Favorites</Text>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/collections')}>
+                  <Text style={[typography.labelMedium, { color: colors.primary }]}>
+                    View All
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View>
+                {favorites.slice(0, 2).map((recipe) => (
+                  <RecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    onPress={() => navigateToRecipe(recipe.id)}
+                    showFavorite
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

@@ -1,53 +1,108 @@
 
-import { setupErrorLogging } from '../utils/errorLogger';
-import { Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { initDatabase } from '../utils/database';
-import { StatusBar } from 'expo-status-bar';
-import { PersistGate } from 'redux-persist/integration/react';
-import { store, persistor } from '../store';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Provider } from 'react-redux';
+import React, { useEffect, useState } from 'react';
 import { Platform, View, Text, ActivityIndicator } from 'react-native';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
+import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
+import { store, persistor } from '../store';
+import { initDatabase } from '../utils/database';
+import { parseDeepLink } from '../utils/sharing';
+import { setupErrorLogging } from '../utils/errorLogger';
 import { colors, typography } from '../styles/commonStyles';
 
-const LoadingScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-    <ActivityIndicator size="large" color={colors.primary} />
-    <Text style={[typography.body, { color: colors.text, marginTop: 16 }]}>
-      Initializing database...
-    </Text>
-  </View>
-);
+function LoadingScreen() {
+  return (
+    <View style={{ 
+      flex: 1, 
+      justifyContent: 'center', 
+      alignItems: 'center',
+      backgroundColor: colors.background 
+    }}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={[typography.bodyLarge, { 
+        marginTop: 16, 
+        color: colors.textSecondary 
+      }]}>
+        Loading...
+      </Text>
+    </View>
+  );
+}
 
-const RootLayout: React.FC = () => {
-  const [isDbReady, setIsDbReady] = useState(false);
-  const [dbError, setDbError] = useState<string | null>(null);
+export default function RootLayout() {
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        console.log('Setting up error logging...');
+        console.log('Initializing app...');
+        
+        // Setup error logging
         setupErrorLogging();
         
-        console.log('Initializing database...');
+        // Initialize database
         await initDatabase();
         
-        console.log('App initialization completed');
-        setIsDbReady(true);
+        // Handle initial deep link (if app was opened via deep link)
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) {
+          console.log('App opened with deep link:', initialUrl);
+          handleDeepLink(initialUrl);
+        }
+        
+        // Listen for deep links while app is running
+        const subscription = Linking.addEventListener('url', ({ url }) => {
+          console.log('Deep link received:', url);
+          handleDeepLink(url);
+        });
+        
+        setIsReady(true);
+        
+        return () => {
+          subscription?.remove();
+        };
       } catch (error) {
         console.error('Failed to initialize app:', error);
-        setDbError(error instanceof Error ? error.message : 'Unknown error');
-        // Still set as ready to allow app to function with fallback
-        setIsDbReady(true);
+        setIsReady(true); // Still allow app to start
       }
     };
 
     initializeApp();
   }, []);
 
-  if (!isDbReady) {
+  const handleDeepLink = async (url: string) => {
+    console.log('Processing deep link:', url);
+    
+    try {
+      // Check if it's a recipe import link
+      if (url.startsWith('myrecipebox://import/')) {
+        const validationResult = await parseDeepLink(url);
+        
+        if (validationResult.isValid && validationResult.recipe) {
+          // Navigate to import preview
+          router.push({
+            pathname: '/import/preview',
+            params: {
+              recipeData: encodeURIComponent(JSON.stringify(validationResult.recipe)),
+            },
+          });
+        } else {
+          // Show error based on validation result
+          console.error('Deep link validation failed:', validationResult.errorMessage);
+          // The error will be handled in the import preview screen
+        }
+      }
+    } catch (error) {
+      console.error('Error handling deep link:', error);
+    }
+  };
+
+  if (!isReady) {
     return <LoadingScreen />;
   }
 
@@ -56,28 +111,16 @@ const RootLayout: React.FC = () => {
       <Provider store={store}>
         <PersistGate loading={<LoadingScreen />} persistor={persistor}>
           <SafeAreaProvider>
-            <StatusBar style="auto" />
-            {dbError && Platform.OS === 'web' && (
-              <View style={{ 
-                backgroundColor: '#FFF3CD', 
-                padding: 8, 
-                borderBottomWidth: 1, 
-                borderBottomColor: '#FFEAA7' 
-              }}>
-                <Text style={{ textAlign: 'center', fontSize: 12, color: '#856404' }}>
-                  Using web fallback mode: {dbError}
-                </Text>
-              </View>
-            )}
             <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="recipe/[id]" />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="recipe/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="scanner" options={{ headerShown: false }} />
+              <Stack.Screen name="import/preview" options={{ headerShown: false }} />
             </Stack>
+            <StatusBar style="auto" />
           </SafeAreaProvider>
         </PersistGate>
       </Provider>
     </GestureHandlerRootView>
   );
-};
-
-export default RootLayout;
+}
