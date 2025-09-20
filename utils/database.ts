@@ -1,13 +1,16 @@
 
-import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Recipe, RecipeImage, UserPreference, SchemaInfo } from '../types/Recipe';
 
 const DATABASE_NAME = 'myrecipebox.db';
 const CURRENT_SCHEMA_VERSION = 1;
 
-let db: SQLite.SQLiteDatabase | null = null;
+// Platform-specific database implementation
+let db: any = null;
+let isWebFallback = false;
 
-export const initDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
+export const initDatabase = async (): Promise<any> => {
   console.log('Initializing database...');
   
   if (db) {
@@ -15,18 +18,52 @@ export const initDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
   }
 
   try {
-    db = await SQLite.openDatabaseAsync(DATABASE_NAME);
-    console.log('Database opened successfully');
+    if (Platform.OS === 'web') {
+      // Use AsyncStorage fallback for web to avoid WASM issues
+      console.log('Using AsyncStorage fallback for web platform');
+      isWebFallback = true;
+      await initWebDatabase();
+      db = { isWebFallback: true };
+    } else {
+      // Use SQLite for native platforms
+      const SQLite = require('expo-sqlite');
+      db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+      console.log('Database opened successfully');
+      await runMigrations(db);
+    }
     
-    await runMigrations(db);
     return db;
   } catch (error) {
     console.error('Failed to initialize database:', error);
-    throw error;
+    // Fallback to AsyncStorage even on native if SQLite fails
+    console.log('Falling back to AsyncStorage due to SQLite error');
+    isWebFallback = true;
+    await initWebDatabase();
+    db = { isWebFallback: true };
+    return db;
   }
 };
 
-const runMigrations = async (database: SQLite.SQLiteDatabase): Promise<void> => {
+const initWebDatabase = async (): Promise<void> => {
+  console.log('Initializing web database with AsyncStorage...');
+  
+  // Initialize empty collections if they don't exist
+  const recipes = await AsyncStorage.getItem('recipes');
+  if (!recipes) {
+    await AsyncStorage.setItem('recipes', JSON.stringify([]));
+  }
+  
+  const preferences = await AsyncStorage.getItem('user_preferences');
+  if (!preferences) {
+    await AsyncStorage.setItem('user_preferences', JSON.stringify({}));
+  }
+  
+  // Set schema version
+  await AsyncStorage.setItem('schema_version', '1');
+  console.log('Web database initialized');
+};
+
+const runMigrations = async (database: any): Promise<void> => {
   console.log('Running database migrations...');
   
   try {
@@ -52,7 +89,7 @@ const runMigrations = async (database: SQLite.SQLiteDatabase): Promise<void> => 
   }
 };
 
-const migrateToV1 = async (database: SQLite.SQLiteDatabase): Promise<void> => {
+const migrateToV1 = async (database: any): Promise<void> => {
   console.log('Migrating to schema version 1...');
   
   await database.execAsync(`
@@ -130,6 +167,16 @@ const migrateToV1 = async (database: SQLite.SQLiteDatabase): Promise<void> => {
   console.log('Schema version 1 migration completed');
 };
 
+// Web-specific AsyncStorage operations
+const getRecipesFromStorage = async (): Promise<Recipe[]> => {
+  const recipesJson = await AsyncStorage.getItem('recipes');
+  return recipesJson ? JSON.parse(recipesJson) : [];
+};
+
+const saveRecipesToStorage = async (recipes: Recipe[]): Promise<void> => {
+  await AsyncStorage.setItem('recipes', JSON.stringify(recipes));
+};
+
 // Recipe CRUD operations
 export const createRecipe = async (recipe: Omit<Recipe, 'id' | 'created_at' | 'modified_at'>): Promise<string> => {
   const database = await initDatabase();
@@ -138,19 +185,35 @@ export const createRecipe = async (recipe: Omit<Recipe, 'id' | 'created_at' | 'm
   
   console.log('Creating recipe:', recipe.title);
   
-  await database.runAsync(
-    `INSERT INTO recipes (
-      id, title, description, ingredients, instructions, source_url,
-      servings, prep_time, cook_time, difficulty, cuisine, tags,
-      rating, is_favorite, notes, created_at, modified_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id, recipe.title, recipe.description, recipe.ingredients, recipe.instructions,
-      recipe.source_url, recipe.servings, recipe.prep_time, recipe.cook_time,
-      recipe.difficulty, recipe.cuisine, JSON.stringify(recipe.tags || []),
-      recipe.rating, recipe.is_favorite ? 1 : 0, recipe.notes, now, now
-    ]
-  );
+  if (isWebFallback) {
+    // AsyncStorage implementation
+    const recipes = await getRecipesFromStorage();
+    const newRecipe: Recipe = {
+      ...recipe,
+      id,
+      created_at: now,
+      modified_at: now,
+      tags: recipe.tags || [],
+      is_favorite: recipe.is_favorite || false,
+    };
+    recipes.push(newRecipe);
+    await saveRecipesToStorage(recipes);
+  } else {
+    // SQLite implementation
+    await database.runAsync(
+      `INSERT INTO recipes (
+        id, title, description, ingredients, instructions, source_url,
+        servings, prep_time, cook_time, difficulty, cuisine, tags,
+        rating, is_favorite, notes, created_at, modified_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id, recipe.title, recipe.description, recipe.ingredients, recipe.instructions,
+        recipe.source_url, recipe.servings, recipe.prep_time, recipe.cook_time,
+        recipe.difficulty, recipe.cuisine, JSON.stringify(recipe.tags || []),
+        recipe.rating, recipe.is_favorite ? 1 : 0, recipe.notes, now, now
+      ]
+    );
+  }
 
   console.log('Recipe created with ID:', id);
   return id;
@@ -159,34 +222,48 @@ export const createRecipe = async (recipe: Omit<Recipe, 'id' | 'created_at' | 'm
 export const getRecipe = async (id: string): Promise<Recipe | null> => {
   const database = await initDatabase();
   
-  const result = await database.getFirstAsync<any>(
-    'SELECT * FROM recipes WHERE id = ?',
-    [id]
-  );
+  if (isWebFallback) {
+    // AsyncStorage implementation
+    const recipes = await getRecipesFromStorage();
+    return recipes.find(recipe => recipe.id === id) || null;
+  } else {
+    // SQLite implementation
+    const result = await database.getFirstAsync<any>(
+      'SELECT * FROM recipes WHERE id = ?',
+      [id]
+    );
 
-  if (!result) {
-    return null;
+    if (!result) {
+      return null;
+    }
+
+    return {
+      ...result,
+      tags: result.tags ? JSON.parse(result.tags) : [],
+      is_favorite: Boolean(result.is_favorite),
+    };
   }
-
-  return {
-    ...result,
-    tags: result.tags ? JSON.parse(result.tags) : [],
-    is_favorite: Boolean(result.is_favorite),
-  };
 };
 
 export const getAllRecipes = async (): Promise<Recipe[]> => {
   const database = await initDatabase();
   
-  const results = await database.getAllAsync<any>(
-    'SELECT * FROM recipes ORDER BY modified_at DESC'
-  );
+  if (isWebFallback) {
+    // AsyncStorage implementation
+    const recipes = await getRecipesFromStorage();
+    return recipes.sort((a, b) => b.modified_at - a.modified_at);
+  } else {
+    // SQLite implementation
+    const results = await database.getAllAsync<any>(
+      'SELECT * FROM recipes ORDER BY modified_at DESC'
+    );
 
-  return results.map(result => ({
-    ...result,
-    tags: result.tags ? JSON.parse(result.tags) : [],
-    is_favorite: Boolean(result.is_favorite),
-  }));
+    return results.map(result => ({
+      ...result,
+      tags: result.tags ? JSON.parse(result.tags) : [],
+      is_favorite: Boolean(result.is_favorite),
+    }));
+  }
 };
 
 export const updateRecipe = async (id: string, updates: Partial<Recipe>): Promise<void> => {
@@ -195,30 +272,45 @@ export const updateRecipe = async (id: string, updates: Partial<Recipe>): Promis
   
   console.log('Updating recipe:', id);
   
-  const fields = [];
-  const values = [];
-  
-  Object.entries(updates).forEach(([key, value]) => {
-    if (key !== 'id' && key !== 'created_at') {
-      fields.push(`${key} = ?`);
-      if (key === 'tags') {
-        values.push(JSON.stringify(value));
-      } else if (key === 'is_favorite') {
-        values.push(value ? 1 : 0);
-      } else {
-        values.push(value);
-      }
+  if (isWebFallback) {
+    // AsyncStorage implementation
+    const recipes = await getRecipesFromStorage();
+    const index = recipes.findIndex(recipe => recipe.id === id);
+    if (index !== -1) {
+      recipes[index] = {
+        ...recipes[index],
+        ...updates,
+        modified_at: now,
+      };
+      await saveRecipesToStorage(recipes);
     }
-  });
-  
-  fields.push('modified_at = ?');
-  values.push(now);
-  values.push(id);
-  
-  await database.runAsync(
-    `UPDATE recipes SET ${fields.join(', ')} WHERE id = ?`,
-    values
-  );
+  } else {
+    // SQLite implementation
+    const fields = [];
+    const values = [];
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      if (key !== 'id' && key !== 'created_at') {
+        fields.push(`${key} = ?`);
+        if (key === 'tags') {
+          values.push(JSON.stringify(value));
+        } else if (key === 'is_favorite') {
+          values.push(value ? 1 : 0);
+        } else {
+          values.push(value);
+        }
+      }
+    });
+    
+    fields.push('modified_at = ?');
+    values.push(now);
+    values.push(id);
+    
+    await database.runAsync(
+      `UPDATE recipes SET ${fields.join(', ')} WHERE id = ?`,
+      values
+    );
+  }
 };
 
 export const deleteRecipe = async (id: string): Promise<void> => {
@@ -226,7 +318,15 @@ export const deleteRecipe = async (id: string): Promise<void> => {
   
   console.log('Deleting recipe:', id);
   
-  await database.runAsync('DELETE FROM recipes WHERE id = ?', [id]);
+  if (isWebFallback) {
+    // AsyncStorage implementation
+    const recipes = await getRecipesFromStorage();
+    const filteredRecipes = recipes.filter(recipe => recipe.id !== id);
+    await saveRecipesToStorage(filteredRecipes);
+  } else {
+    // SQLite implementation
+    await database.runAsync('DELETE FROM recipes WHERE id = ?', [id]);
+  }
 };
 
 export const searchRecipes = async (query: string): Promise<Recipe[]> => {
@@ -234,69 +334,117 @@ export const searchRecipes = async (query: string): Promise<Recipe[]> => {
   
   console.log('Searching recipes for:', query);
   
-  const results = await database.getAllAsync<any>(
-    `SELECT recipes.* FROM recipes
-     JOIN recipes_fts ON recipes.rowid = recipes_fts.rowid
-     WHERE recipes_fts MATCH ?
-     ORDER BY rank`,
-    [query]
-  );
+  if (isWebFallback) {
+    // AsyncStorage implementation - simple text search
+    const recipes = await getRecipesFromStorage();
+    const searchTerm = query.toLowerCase();
+    return recipes.filter(recipe => 
+      recipe.title.toLowerCase().includes(searchTerm) ||
+      recipe.description?.toLowerCase().includes(searchTerm) ||
+      recipe.ingredients?.toLowerCase().includes(searchTerm) ||
+      recipe.instructions?.toLowerCase().includes(searchTerm)
+    );
+  } else {
+    // SQLite implementation with FTS
+    const results = await database.getAllAsync<any>(
+      `SELECT recipes.* FROM recipes
+       JOIN recipes_fts ON recipes.rowid = recipes_fts.rowid
+       WHERE recipes_fts MATCH ?
+       ORDER BY rank`,
+      [query]
+    );
 
-  return results.map(result => ({
-    ...result,
-    tags: result.tags ? JSON.parse(result.tags) : [],
-    is_favorite: Boolean(result.is_favorite),
-  }));
+    return results.map(result => ({
+      ...result,
+      tags: result.tags ? JSON.parse(result.tags) : [],
+      is_favorite: Boolean(result.is_favorite),
+    }));
+  }
 };
 
 export const getFavoriteRecipes = async (): Promise<Recipe[]> => {
   const database = await initDatabase();
   
-  const results = await database.getAllAsync<any>(
-    'SELECT * FROM recipes WHERE is_favorite = 1 ORDER BY modified_at DESC'
-  );
+  if (isWebFallback) {
+    // AsyncStorage implementation
+    const recipes = await getRecipesFromStorage();
+    return recipes
+      .filter(recipe => recipe.is_favorite)
+      .sort((a, b) => b.modified_at - a.modified_at);
+  } else {
+    // SQLite implementation
+    const results = await database.getAllAsync<any>(
+      'SELECT * FROM recipes WHERE is_favorite = 1 ORDER BY modified_at DESC'
+    );
 
-  return results.map(result => ({
-    ...result,
-    tags: result.tags ? JSON.parse(result.tags) : [],
-    is_favorite: Boolean(result.is_favorite),
-  }));
+    return results.map(result => ({
+      ...result,
+      tags: result.tags ? JSON.parse(result.tags) : [],
+      is_favorite: Boolean(result.is_favorite),
+    }));
+  }
 };
 
 export const getRecentRecipes = async (limit: number = 10): Promise<Recipe[]> => {
   const database = await initDatabase();
   
-  const results = await database.getAllAsync<any>(
-    'SELECT * FROM recipes ORDER BY created_at DESC LIMIT ?',
-    [limit]
-  );
+  if (isWebFallback) {
+    // AsyncStorage implementation
+    const recipes = await getRecipesFromStorage();
+    return recipes
+      .sort((a, b) => b.created_at - a.created_at)
+      .slice(0, limit);
+  } else {
+    // SQLite implementation
+    const results = await database.getAllAsync<any>(
+      'SELECT * FROM recipes ORDER BY created_at DESC LIMIT ?',
+      [limit]
+    );
 
-  return results.map(result => ({
-    ...result,
-    tags: result.tags ? JSON.parse(result.tags) : [],
-    is_favorite: Boolean(result.is_favorite),
-  }));
+    return results.map(result => ({
+      ...result,
+      tags: result.tags ? JSON.parse(result.tags) : [],
+      is_favorite: Boolean(result.is_favorite),
+    }));
+  }
 };
 
 // User preferences
 export const getUserPreference = async (key: string): Promise<string | null> => {
   const database = await initDatabase();
   
-  const result = await database.getFirstAsync<{ value: string }>(
-    'SELECT value FROM user_preferences WHERE key = ?',
-    [key]
-  );
+  if (isWebFallback) {
+    // AsyncStorage implementation
+    const preferencesJson = await AsyncStorage.getItem('user_preferences');
+    const preferences = preferencesJson ? JSON.parse(preferencesJson) : {};
+    return preferences[key] || null;
+  } else {
+    // SQLite implementation
+    const result = await database.getFirstAsync<{ value: string }>(
+      'SELECT value FROM user_preferences WHERE key = ?',
+      [key]
+    );
 
-  return result?.value || null;
+    return result?.value || null;
+  }
 };
 
 export const setUserPreference = async (key: string, value: string): Promise<void> => {
   const database = await initDatabase();
   
-  await database.runAsync(
-    'INSERT OR REPLACE INTO user_preferences (key, value) VALUES (?, ?)',
-    [key, value]
-  );
+  if (isWebFallback) {
+    // AsyncStorage implementation
+    const preferencesJson = await AsyncStorage.getItem('user_preferences');
+    const preferences = preferencesJson ? JSON.parse(preferencesJson) : {};
+    preferences[key] = value;
+    await AsyncStorage.setItem('user_preferences', JSON.stringify(preferences));
+  } else {
+    // SQLite implementation
+    await database.runAsync(
+      'INSERT OR REPLACE INTO user_preferences (key, value) VALUES (?, ?)',
+      [key, value]
+    );
+  }
 };
 
 // Utility function to generate unique IDs

@@ -1,15 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { commonStyles, colors, typography, spacing } from '../../styles/commonStyles';
-import { RootState, AppDispatch } from '../../store';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { setTheme } from '../../store/slices/uiSlice';
 import { getUserPreference, setUserPreference } from '../../utils/database';
+import React, { useState, useEffect } from 'react';
+import { RootState, AppDispatch } from '../../store';
 import Icon from '../../components/Icon';
+import PlatformNotice from '../../components/PlatformNotice';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, Platform } from 'react-native';
 
-export default function SettingsScreen() {
+const SettingsScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { theme } = useSelector((state: RootState) => state.ui);
   const [notifications, setNotifications] = useState(false);
@@ -21,48 +22,55 @@ export default function SettingsScreen() {
 
   const loadPreferences = async () => {
     try {
-      const notificationsEnabled = await getUserPreference('notifications_enabled');
-      const autoBackupEnabled = await getUserPreference('auto_backup_enabled');
+      const notificationsPref = await getUserPreference('notifications');
+      const autoBackupPref = await getUserPreference('autoBackup');
       
-      setNotifications(notificationsEnabled === 'true');
-      setAutoBackup(autoBackupEnabled === 'true');
+      setNotifications(notificationsPref === 'true');
+      setAutoBackup(autoBackupPref === 'true');
     } catch (error) {
       console.error('Failed to load preferences:', error);
     }
   };
 
   const handleThemeChange = async (newTheme: 'light' | 'dark' | 'auto') => {
-    console.log('Changing theme to:', newTheme);
-    dispatch(setTheme(newTheme));
-    await setUserPreference('theme', newTheme);
+    try {
+      dispatch(setTheme(newTheme));
+      await setUserPreference('theme', newTheme);
+    } catch (error) {
+      console.error('Failed to save theme preference:', error);
+    }
   };
 
   const handleNotificationsToggle = async (value: boolean) => {
-    console.log('Toggling notifications:', value);
-    setNotifications(value);
-    await setUserPreference('notifications_enabled', value.toString());
+    try {
+      setNotifications(value);
+      await setUserPreference('notifications', value.toString());
+    } catch (error) {
+      console.error('Failed to save notifications preference:', error);
+    }
   };
 
   const handleAutoBackupToggle = async (value: boolean) => {
-    console.log('Toggling auto backup:', value);
-    setAutoBackup(value);
-    await setUserPreference('auto_backup_enabled', value.toString());
+    try {
+      setAutoBackup(value);
+      await setUserPreference('autoBackup', value.toString());
+    } catch (error) {
+      console.error('Failed to save auto backup preference:', error);
+    }
   };
 
   const handleExportData = () => {
-    console.log('Exporting data...');
     Alert.alert(
       'Export Data',
-      'Export functionality will be implemented in the next phase.',
+      'Export functionality will be available in a future update.',
       [{ text: 'OK' }]
     );
   };
 
   const handleImportData = () => {
-    console.log('Importing data...');
     Alert.alert(
       'Import Data',
-      'Import functionality will be implemented in the next phase.',
+      'Import functionality will be available in a future update.',
       [{ text: 'OK' }]
     );
   };
@@ -77,9 +85,7 @@ export default function SettingsScreen() {
           text: 'Clear Data', 
           style: 'destructive',
           onPress: () => {
-            console.log('Clearing all data...');
-            // TODO: Implement data clearing
-            Alert.alert('Data Cleared', 'All data has been cleared.');
+            console.log('Clear data functionality to be implemented');
           }
         }
       ]
@@ -89,64 +95,57 @@ export default function SettingsScreen() {
   const renderSettingItem = (
     title: string,
     subtitle?: string,
-    icon?: string,
-    onPress?: () => void,
-    rightElement?: React.ReactNode
+    rightComponent?: React.ReactNode,
+    onPress?: () => void
   ) => (
     <TouchableOpacity
       style={[commonStyles.card, { marginBottom: spacing.sm }]}
       onPress={onPress}
       disabled={!onPress}
     >
-      <View style={commonStyles.spaceBetween}>
-        <View style={[commonStyles.row, { flex: 1 }]}>
-          {icon && (
-            <Icon name={icon as any} size={20} color={colors.textSecondary} style={{ marginRight: spacing.md }} />
-          )}
-          <View style={{ flex: 1 }}>
-            <Text style={typography.bodyLarge}>{title}</Text>
-            {subtitle && (
-              <Text style={[typography.bodySmall, { color: colors.textSecondary, marginTop: spacing.xs }]}>
-                {subtitle}
-              </Text>
-            )}
-          </View>
-        </View>
-        {rightElement || (onPress && <Icon name="chevron-forward" size={16} color={colors.textSecondary} />)}
+      <View style={{ flex: 1 }}>
+        <Text style={[typography.subtitle, { color: colors.text }]}>{title}</Text>
+        {subtitle && (
+          <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 4 }]}>
+            {subtitle}
+          </Text>
+        )}
       </View>
+      {rightComponent}
     </TouchableOpacity>
   );
 
   const renderThemeSelector = () => (
     <View style={[commonStyles.card, { marginBottom: spacing.sm }]}>
-      <View style={[commonStyles.row, { marginBottom: spacing.md }]}>
-        <Icon name="color-palette" size={20} color={colors.textSecondary} style={{ marginRight: spacing.md }} />
-        <View>
-          <Text style={typography.bodyLarge}>Theme</Text>
-          <Text style={[typography.bodySmall, { color: colors.textSecondary, marginTop: spacing.xs }]}>
-            Choose your preferred app appearance
-          </Text>
-        </View>
-      </View>
-      
-      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+      <Text style={[typography.subtitle, { color: colors.text, marginBottom: spacing.sm }]}>
+        Theme
+      </Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         {(['light', 'dark', 'auto'] as const).map((themeOption) => (
           <TouchableOpacity
             key={themeOption}
-            style={{
-              flex: 1,
-              paddingVertical: spacing.sm,
-              alignItems: 'center',
-              backgroundColor: theme === themeOption ? colors.primary : colors.surface,
-              borderRadius: 8,
-            }}
+            style={[
+              {
+                flex: 1,
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.md,
+                borderRadius: 8,
+                marginHorizontal: 4,
+                backgroundColor: theme === themeOption ? colors.primary : colors.surface,
+              }
+            ]}
             onPress={() => handleThemeChange(themeOption)}
           >
-            <Text style={{
-              ...typography.labelMedium,
-              color: theme === themeOption ? colors.background : colors.text,
-              textTransform: 'capitalize',
-            }}>
+            <Text
+              style={[
+                typography.body,
+                {
+                  textAlign: 'center',
+                  color: theme === themeOption ? colors.onPrimary : colors.text,
+                  textTransform: 'capitalize',
+                }
+              ]}
+            >
               {themeOption}
             </Text>
           </TouchableOpacity>
@@ -156,139 +155,83 @@ export default function SettingsScreen() {
   );
 
   return (
-    <SafeAreaView style={commonStyles.safeArea}>
-      <ScrollView
-        style={commonStyles.container}
-        contentContainerStyle={{ padding: spacing.md }}
-      >
-        {/* Header */}
-        <View style={{ marginBottom: spacing.lg }}>
-          <Text style={[typography.headlineMedium, { marginBottom: spacing.xs }]}>
-            Settings
-          </Text>
-          <Text style={[typography.bodyMedium, { color: colors.textSecondary }]}>
-            Customize your recipe box experience
-          </Text>
-        </View>
+    <SafeAreaView style={commonStyles.container}>
+      <View style={commonStyles.header}>
+        <Text style={[typography.title, { color: colors.text }]}>Settings</Text>
+      </View>
 
-        {/* Appearance */}
-        <Text style={[typography.titleMedium, { marginBottom: spacing.md }]}>
-          Appearance
-        </Text>
+      <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
+        {Platform.OS === 'web' && (
+          <PlatformNotice 
+            message="Running in web mode with AsyncStorage fallback. For full SQLite features, use the native app."
+            type="info"
+          />
+        )}
+
         {renderThemeSelector()}
 
-        {/* Notifications */}
-        <Text style={[typography.titleMedium, { marginBottom: spacing.md, marginTop: spacing.lg }]}>
-          Notifications
-        </Text>
         {renderSettingItem(
-          'Push Notifications',
-          'Get notified about recipe reminders and updates',
-          'notifications',
-          undefined,
+          'Notifications',
+          'Get notified about cooking reminders',
           <Switch
             value={notifications}
             onValueChange={handleNotificationsToggle}
-            trackColor={{ false: colors.outline, true: colors.primary }}
-            thumbColor={colors.background}
+            trackColor={{ false: colors.surface, true: colors.primary }}
+            thumbColor={notifications ? colors.onPrimary : colors.textSecondary}
           />
         )}
 
-        {/* Data & Backup */}
-        <Text style={[typography.titleMedium, { marginBottom: spacing.md, marginTop: spacing.lg }]}>
-          Data & Backup
-        </Text>
         {renderSettingItem(
           'Auto Backup',
-          'Automatically backup your recipes to Google Drive',
-          'cloud-upload',
-          undefined,
+          'Automatically backup your recipes',
           <Switch
             value={autoBackup}
             onValueChange={handleAutoBackupToggle}
-            trackColor={{ false: colors.outline, true: colors.primary }}
-            thumbColor={colors.background}
+            trackColor={{ false: colors.surface, true: colors.primary }}
+            thumbColor={autoBackup ? colors.onPrimary : colors.textSecondary}
           />
         )}
+
+        <View style={{ height: spacing.lg }} />
+
+        <Text style={[typography.subtitle, { color: colors.text, marginBottom: spacing.sm }]}>
+          Data Management
+        </Text>
+
         {renderSettingItem(
           'Export Data',
-          'Export all your recipes to a file',
-          'download',
+          'Save your recipes to a file',
+          <Icon name="download" size={20} color={colors.textSecondary} />,
           handleExportData
         )}
+
         {renderSettingItem(
           'Import Data',
-          'Import recipes from a backup file',
-          'cloud-download',
+          'Load recipes from a file',
+          <Icon name="upload" size={20} color={colors.textSecondary} />,
           handleImportData
         )}
 
-        {/* Storage */}
-        <Text style={[typography.titleMedium, { marginBottom: spacing.md, marginTop: spacing.lg }]}>
-          Storage
-        </Text>
-        {renderSettingItem(
-          'Storage Usage',
-          'View how much space your recipes are using',
-          'folder',
-          () => {
-            Alert.alert('Storage Usage', 'Storage usage details will be implemented in the next phase.');
-          }
-        )}
-
-        {/* About */}
-        <Text style={[typography.titleMedium, { marginBottom: spacing.md, marginTop: spacing.lg }]}>
-          About
-        </Text>
-        {renderSettingItem(
-          'App Version',
-          'MyRecipeBox Local v1.0.0',
-          'information-circle'
-        )}
-        {renderSettingItem(
-          'Privacy Policy',
-          'Learn how we protect your data',
-          'shield-checkmark',
-          () => {
-            Alert.alert('Privacy Policy', 'All your data is stored locally on your device. We do not collect or share any personal information.');
-          }
-        )}
-        {renderSettingItem(
-          'Help & Support',
-          'Get help using the app',
-          'help-circle',
-          () => {
-            Alert.alert('Help & Support', 'Help documentation will be available in the next phase.');
-          }
-        )}
-
-        {/* Danger Zone */}
-        <Text style={[typography.titleMedium, { 
-          marginBottom: spacing.md, 
-          marginTop: spacing.lg,
-          color: colors.error 
-        }]}>
-          Danger Zone
-        </Text>
         {renderSettingItem(
           'Clear All Data',
-          'Permanently delete all recipes and settings',
-          'trash',
+          'Delete all recipes and settings',
+          <Icon name="trash" size={20} color={colors.error} />,
           handleClearData
         )}
 
-        {/* Footer */}
-        <View style={{ 
-          alignItems: 'center', 
-          paddingVertical: spacing.xl,
-          marginTop: spacing.lg 
-        }}>
-          <Text style={[typography.bodySmall, { color: colors.textSecondary, textAlign: 'center' }]}>
-            MyRecipeBox Local{'\n'}
-            Offline-first recipe management
+        <View style={{ height: spacing.xl }} />
+
+        <View style={[commonStyles.card, { alignItems: 'center' }]}>
+          <Text style={[typography.caption, { color: colors.textSecondary }]}>
+            MyRecipeBox Local v1.0.0
+          </Text>
+          <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 4 }]}>
+            {Platform.OS === 'web' ? 'Web Version' : 'Native Version'}
           </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
+
+export default SettingsScreen;
