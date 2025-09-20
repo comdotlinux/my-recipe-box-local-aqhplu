@@ -3,6 +3,7 @@ import { Recipe } from '../types/Recipe';
 import { ShareableRecipe, DeepLinkData, ImportValidationResult, ShareData, BackupMetadata } from '../types/Sharing';
 import { getRecipe, getAllRecipes, getMigrationInfo } from './database';
 import CryptoJS from 'crypto-js';
+import { encode, decode } from 'react-native-base64';
 
 const DEEP_LINK_SCHEME = 'myrecipebox';
 const MAX_LINK_SIZE = 2048; // 2KB limit
@@ -90,7 +91,6 @@ export const generateDeepLink = (recipe: Recipe): string => {
     base64Data = btoa(unescape(encodeURIComponent(jsonString)));
   } else {
     // React Native environment
-    const { encode } = require('react-native-base64');
     base64Data = encode(jsonString);
   }
   
@@ -172,7 +172,6 @@ export const handleImport = async (data: string): Promise<{ ok?: boolean; recipe
       decodedData = atob(data);
     } else {
       // React Native environment
-      const { decode } = require('react-native-base64');
       decodedData = decode(data);
     }
     
@@ -238,7 +237,6 @@ export const parseDeepLink = async (deepLink: string): Promise<ImportValidationR
         jsonString = decodeURIComponent(escape(atob(base64Data)));
       } else {
         // React Native environment
-        const { decode } = require('react-native-base64');
         jsonString = decode(base64Data);
       }
     } catch (error) {

@@ -13,9 +13,8 @@ export const createImagesDirectory = async (): Promise<string> => {
   if (!FileSystem.documentDirectory) {
     throw new Error('Document directory not available');
   }
-  const documentDirectory = FileSystem.documentDirectory;
 
-  const imagesDir = `${documentDirectory}images/`;
+  const imagesDir = `${FileSystem.documentDirectory}images/`;
   const dirInfo = await FileSystem.getInfoAsync(imagesDir);
   
   if (!dirInfo.exists) {
