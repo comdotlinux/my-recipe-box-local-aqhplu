@@ -1,5 +1,6 @@
 
-import * as AuthSession from 'expo-auth-session';
+import { AuthRequest, AuthRequestPromptOptions, makeRedirectUri } from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system';
 import { Platform, Alert } from 'react-native';
@@ -59,7 +60,7 @@ class GoogleDriveBackup {
     try {
       console.log('Starting Google Drive authentication...');
       
-      const redirectUri = AuthSession.makeRedirectUri({
+      const redirectUri = makeRedirectUri({
         useProxy: true,
       });
 
@@ -71,27 +72,30 @@ class GoogleDriveBackup {
         `access_type=offline&` +
         `prompt=consent`;
 
-      const result = await AuthSession.startAsync({
-        authUrl,
-        returnUrl: redirectUri,
-      });
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
-      if (result.type === 'success' && result.params.code) {
-        // Exchange code for tokens
-        const tokens = await this.exchangeCodeForTokens(result.params.code, redirectUri);
+      if (result.type === 'success' && result.url) {
+        // Parse the URL to get the code
+        const url = new URL(result.url);
+        const code = url.searchParams.get('code');
         
-        if (tokens) {
-          this.accessToken = tokens.access_token;
-          this.refreshToken = tokens.refresh_token;
+        if (code) {
+          // Exchange code for tokens
+          const tokens = await this.exchangeCodeForTokens(code, redirectUri);
           
-          // Store tokens securely
-          await setUserPreference('google_access_token', tokens.access_token);
-          if (tokens.refresh_token) {
-            await setUserPreference('google_refresh_token', tokens.refresh_token);
+          if (tokens) {
+            this.accessToken = tokens.access_token;
+            this.refreshToken = tokens.refresh_token;
+            
+            // Store tokens securely
+            await setUserPreference('google_access_token', tokens.access_token);
+            if (tokens.refresh_token) {
+              await setUserPreference('google_refresh_token', tokens.refresh_token);
+            }
+            
+            console.log('Google Drive authentication successful');
+            return true;
           }
-          
-          console.log('Google Drive authentication successful');
-          return true;
         }
       }
       
@@ -219,7 +223,7 @@ class GoogleDriveBackup {
 
       // Create backup file
       const fileName = `backup_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+      const fileUri = `${FileSystem.documentDirectory!}${fileName}`;
       
       await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backupData));
 
