@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, Share, Platform } from 'react-native';
 import { Recipe } from '../types/Recipe';
-import { generateShareMessage, generateDeepLink } from '../utils/sharing';
-import { generateQRCodeData } from '../utils/qrCode';
+import { generateShareMessage, generateDeepLink, generateQRCodeData } from '../utils/sharing';
 import { commonStyles, colors, typography, spacing, borderRadius } from '../styles/commonStyles';
 import Icon from './Icon';
 import SimpleBottomSheet from './BottomSheet';
@@ -47,7 +46,7 @@ export default function ShareOptionsSheet({
     
     try {
       const qrData = generateQRCodeData(recipe);
-      onShowQRCode(qrData);
+      onShowQRCode({ deepLink: qrData.deepLink, recipe: qrData.recipe });
       onClose();
     } catch (error) {
       console.error('Failed to generate QR code:', error);

@@ -3,11 +3,11 @@ import { AuthRequest, AuthRequestPromptOptions, makeRedirectUri } from 'expo-aut
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system';
-import { documentDirectory } from 'expo-file-system';
 import { Platform, Alert } from 'react-native';
 import { getAllRecipes, getUserPreference, setUserPreference, getMigrationInfo } from './database';
 import { Recipe } from '../types/Recipe';
 import { BackupMetadata } from '../types/Sharing';
+import { createBackupMetadata, checkBackupCompatibility, migrateBackupData, validateBackupIntegrity } from './backupVersioning';
 
 const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const GOOGLE_CLIENT_ID = 'your-google-client-id'; // This should be configured in app.json
@@ -206,16 +206,8 @@ class GoogleDriveBackup {
 
       onProgress?.(30);
 
-      // Get migration info for versioning
-      const migrationInfo = await getMigrationInfo();
-      
-      // Create backup metadata
-      const metadata: BackupMetadata = {
-        created: Date.now(),
-        app: '1.3.0',
-        schema: migrationInfo.currentVersion,
-        count: recipes.length,
-      };
+      // Create backup metadata using the versioning utility
+      const metadata = await createBackupMetadata(recipes.length);
 
       // Create backup data
       const backupData: BackupData = {
@@ -239,10 +231,10 @@ class GoogleDriveBackup {
 
       // Create backup file
       const fileName = `backup_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
-      if (!documentDirectory) {
+      if (!FileSystem.documentDirectory) {
         throw new Error('Document directory not available');
       }
-      const fileUri = `${documentDirectory}${fileName}`;
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
       
       await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backupData));
 
@@ -391,6 +383,12 @@ class GoogleDriveBackup {
       // Parse and validate backup
       const backupData: BackupData = JSON.parse(backupContent);
       
+      // Validate backup integrity
+      const validation = validateBackupIntegrity(backupData);
+      if (!validation.valid) {
+        throw new Error(`Backup validation failed: ${validation.errors.join(', ')}`);
+      }
+      
       // Validate checksum
       const dataForChecksum = { ...backupData };
       delete dataForChecksum.checksum;
@@ -406,15 +404,13 @@ class GoogleDriveBackup {
       onProgress?.(50);
 
       // Check version compatibility
-      const migrationInfo = await getMigrationInfo();
-      const backupVersion = backupData.metadata?.schema || backupData.version || 1;
-      const currentVersion = migrationInfo.currentVersion;
+      const compatibility = await checkBackupCompatibility(backupData.metadata);
       
-      if (backupVersion > currentVersion) {
+      if (!compatibility.compatible) {
         const shouldContinue = await new Promise<boolean>((resolve) => {
           Alert.alert(
-            'Newer Backup',
-            'This backup is from a newer app version. Some data might not be compatible. Continue?',
+            'Backup Compatibility',
+            compatibility.message,
             [
               { text: 'Cancel', onPress: () => resolve(false) },
               { text: 'Continue', onPress: () => resolve(true) },
@@ -425,6 +421,16 @@ class GoogleDriveBackup {
         if (!shouldContinue) {
           throw new Error('Restore cancelled by user');
         }
+      }
+
+      // Migrate backup data if needed
+      const backupVersion = backupData.metadata?.schema || backupData.version || 1;
+      const migrationInfo = await getMigrationInfo();
+      const currentVersion = migrationInfo.currentVersion;
+      
+      if (backupVersion < currentVersion) {
+        console.log(`Migrating backup from v${backupVersion} to v${currentVersion}`);
+        backupData.database = await migrateBackupData(backupData.database, backupVersion);
       }
 
       onProgress?.(70);

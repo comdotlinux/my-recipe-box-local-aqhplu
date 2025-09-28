@@ -2,8 +2,8 @@
 import { Recipe } from '../types/Recipe';
 import { ShareableRecipe, DeepLinkData, ImportValidationResult, ShareData, BackupMetadata } from '../types/Sharing';
 import { getRecipe, getAllRecipes, getMigrationInfo } from './database';
-import CryptoJS from 'crypto-js';
 import { encode, decode } from 'react-native-base64';
+import CryptoJS from 'crypto-js';
 
 const DEEP_LINK_SCHEME = 'myrecipebox';
 const MAX_LINK_SIZE = 2048; // 2KB limit
@@ -82,16 +82,15 @@ export const generateDeepLink = (recipe: Recipe): string => {
   
   const shareData = createShareData(recipe);
   
-  // Use proper base64 encoding for cross-platform compatibility
+  // Use react-native-base64 for consistent encoding
   const jsonString = JSON.stringify(shareData);
   let base64Data: string;
   
-  if (typeof btoa !== 'undefined') {
-    // Browser environment
-    base64Data = btoa(unescape(encodeURIComponent(jsonString)));
-  } else {
-    // React Native environment
+  try {
     base64Data = encode(jsonString);
+  } catch (error) {
+    console.error('Base64 encoding failed:', error);
+    throw new Error('Failed to encode recipe data');
   }
   
   const deepLink = `${DEEP_LINK_SCHEME}://import/${base64Data}`;
@@ -118,7 +117,7 @@ export const generateLegacyDeepLink = (recipe: Recipe): string => {
 
   // Convert to base64
   const jsonString = JSON.stringify(deepLinkData);
-  const base64Data = btoa(unescape(encodeURIComponent(jsonString)));
+  const base64Data = encode(jsonString);
   
   const deepLink = `${DEEP_LINK_SCHEME}://import/${base64Data}`;
   
@@ -167,12 +166,11 @@ export const handleImport = async (data: string): Promise<{ ok?: boolean; recipe
   try {
     let decodedData: string;
     
-    if (typeof atob !== 'undefined') {
-      // Browser environment
-      decodedData = atob(data);
-    } else {
-      // React Native environment
+    try {
       decodedData = decode(data);
+    } catch (error) {
+      console.error('Base64 decoding failed:', error);
+      return { error: 'CORRUPTED' };
     }
     
     const shareData = JSON.parse(decodedData);
@@ -232,13 +230,7 @@ export const parseDeepLink = async (deepLink: string): Promise<ImportValidationR
     // Decode base64
     let jsonString: string;
     try {
-      if (typeof atob !== 'undefined') {
-        // Browser environment
-        jsonString = decodeURIComponent(escape(atob(base64Data)));
-      } else {
-        // React Native environment
-        jsonString = decode(base64Data);
-      }
+      jsonString = decode(base64Data);
     } catch (error) {
       console.error('Failed to decode base64:', error);
       return {
@@ -370,18 +362,32 @@ export const parseDeepLink = async (deepLink: string): Promise<ImportValidationR
   }
 };
 
-// Generate two-link share message
+// Generate comprehensive share message with version info
 export const generateShareMessage = (recipe: Recipe): string => {
   const deepLink = generateDeepLink(recipe);
   const webLink = `https://myrecipebox.app/view/${recipe.id}`;
   
   return `🍳 ${recipe.title}
 
-No app? View here:
+📱 Import to MyRecipeBox:
+${deepLink}
+
+🌐 View in browser:
 ${webLink}
 
-Have app? Import:
-${deepLink}`;
+✨ Shared from MyRecipeBox v${APP_VERSION}`;
+};
+
+// Generate version-aware QR code data
+export const generateQRCodeData = (recipe: Recipe): { deepLink: string; recipe: any; version: number } => {
+  const deepLink = generateDeepLink(recipe);
+  const shareData = createShareData(recipe);
+  
+  return {
+    deepLink,
+    recipe: shareData.recipe,
+    version: CURRENT_VERSION
+  };
 };
 
 // Sanitize input for security

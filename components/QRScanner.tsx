@@ -52,16 +52,19 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
         
         switch (validationResult.error) {
           case 'corrupted':
-            errorMessage = 'Link damaged, ask for reshare';
+            errorMessage = 'Recipe data is corrupted';
             break;
           case 'duplicate':
-            errorMessage = 'Already have this recipe';
+            errorMessage = 'You already have this recipe';
             break;
           case 'invalid':
-            errorMessage = 'Cannot read this recipe';
+            errorMessage = 'Invalid recipe format';
             break;
           case 'size_limit':
             errorMessage = 'Recipe data too large';
+            break;
+          case 'version_mismatch':
+            errorMessage = 'Recipe requires app update';
             break;
         }
 
@@ -71,6 +74,14 @@ export default function QRScanner({ onScanSuccess, onClose }: QRScannerProps) {
           [{ text: 'Try Again', onPress: () => setScanned(false) }]
         );
         return;
+      }
+
+      // Show version info if available
+      if (validationResult.shareVersion && validationResult.currentVersion) {
+        const { shareVersion, currentVersion } = validationResult;
+        if (shareVersion !== currentVersion) {
+          console.log(`Importing recipe: v${shareVersion} → v${currentVersion}`);
+        }
       }
 
       // Success - pass the recipe to parent

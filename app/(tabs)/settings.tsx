@@ -7,10 +7,12 @@ import { router } from 'expo-router';
 import { commonStyles, colors, typography, spacing } from '../../styles/commonStyles';
 import { RootState, AppDispatch } from '../../store';
 import { setTheme } from '../../store/slices/uiSlice';
-import { getUserPreference, setUserPreference } from '../../utils/database';
+import { getUserPreference, setUserPreference, getMigrationInfo } from '../../utils/database';
 import Icon from '../../components/Icon';
 import PlatformNotice from '../../components/PlatformNotice';
 import DatabaseTestPanel from '../../components/DatabaseTestPanel';
+import VersionCompatibilityInfo from '../../components/VersionCompatibilityInfo';
+import { getVersionMatrix } from '../../utils/backupVersioning';
 
 export default function SettingsScreen() {
   const dispatch = useDispatch<AppDispatch>();
@@ -18,6 +20,8 @@ export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(false);
   const [autoBackup, setAutoBackup] = useState(false);
   const [showTestPanel, setShowTestPanel] = useState(false);
+  const [showVersionMatrix, setShowVersionMatrix] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState(1);
 
   useEffect(() => {
     loadPreferences();
@@ -30,6 +34,10 @@ export default function SettingsScreen() {
       
       setNotifications(notificationsValue === 'true');
       setAutoBackup(autoBackupValue === 'true');
+      
+      // Load current schema version
+      const migrationInfo = await getMigrationInfo();
+      setCurrentVersion(migrationInfo.currentVersion);
     } catch (error) {
       console.error('Failed to load preferences:', error);
     }
@@ -283,8 +291,25 @@ export default function SettingsScreen() {
             
             {renderSettingItem(
               'Version',
-              '1.0.0',
+              `1.3.0 (Schema v${currentVersion})`,
               'information-circle'
+            )}
+            
+            {renderSettingItem(
+              'Version Compatibility',
+              'View compatibility matrix for sharing and backups',
+              'git-branch',
+              () => setShowVersionMatrix(!showVersionMatrix)
+            )}
+            
+            {showVersionMatrix && (
+              <View style={[commonStyles.card, { marginTop: spacing.sm }]}>
+                <VersionCompatibilityInfo
+                  shareVersion={currentVersion}
+                  currentVersion={currentVersion}
+                  showMatrix={true}
+                />
+              </View>
             )}
             
             {renderSettingItem(

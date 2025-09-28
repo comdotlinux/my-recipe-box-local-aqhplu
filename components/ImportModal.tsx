@@ -4,20 +4,22 @@ import { View, Text, TouchableOpacity, Modal, ScrollView, Alert } from 'react-na
 import { commonStyles, colors, typography, spacing, borderRadius } from '../styles/commonStyles';
 import Icon from './Icon';
 import { ImportValidationResult } from '../types/Sharing';
-import { convertToRecipe } from '../utils/sharing';
+import { convertToRecipe, handleImport as handleVersionedImport, getCompatibleFields } from '../utils/sharing';
 
 interface ImportModalProps {
   isVisible: boolean;
   onClose: () => void;
   onImport: (recipe: any) => Promise<void>;
   validationResult: ImportValidationResult | null;
+  shareData?: string; // Base64 encoded share data for versioned imports
 }
 
 const ImportModal: React.FC<ImportModalProps> = ({
   isVisible,
   onClose,
   onImport,
-  validationResult
+  validationResult,
+  shareData
 }) => {
   const [isImporting, setIsImporting] = useState(false);
 
@@ -28,7 +30,21 @@ const ImportModal: React.FC<ImportModalProps> = ({
 
     try {
       setIsImporting(true);
-      const recipeData = convertToRecipe(validationResult.recipe);
+      
+      let recipeData;
+      
+      // Handle versioned imports if shareData is provided
+      if (shareData) {
+        const importResult = await handleVersionedImport(shareData);
+        if (importResult.error) {
+          throw new Error(importResult.error);
+        }
+        recipeData = importResult.recipe;
+      } else {
+        // Legacy import
+        recipeData = convertToRecipe(validationResult.recipe);
+      }
+      
       await onImport(recipeData);
       onClose();
     } catch (error) {
