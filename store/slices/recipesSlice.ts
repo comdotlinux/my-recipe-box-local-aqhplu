@@ -81,8 +81,24 @@ export const updateRecipe = createAsyncThunk(
 export const deleteRecipe = createAsyncThunk(
   'recipes/delete',
   async (id: string) => {
-    console.log('Deleting recipe:', id);
+    console.log('Deleting recipe from database:', id);
+    
+    // First verify the recipe exists
+    const existingRecipe = await db.getRecipe(id);
+    if (!existingRecipe) {
+      throw new Error('Recipe not found');
+    }
+    
+    // Delete from database
     await db.deleteRecipe(id);
+    
+    // Verify deletion was successful
+    const deletedRecipe = await db.getRecipe(id);
+    if (deletedRecipe) {
+      throw new Error('Recipe deletion failed - recipe still exists');
+    }
+    
+    console.log('Recipe successfully deleted from database:', id);
     return id;
   }
 );
@@ -235,18 +251,27 @@ const recipesSlice = createSlice({
       .addCase(deleteRecipe.pending, (state) => {
         state.loading = true;
         state.error = null;
+        console.log('Delete recipe pending - setting loading state');
       })
       .addCase(deleteRecipe.fulfilled, (state, action) => {
+        console.log('Delete recipe fulfilled - removing from state:', action.payload);
         state.loading = false;
+        
+        // Remove from all arrays
         state.recipes = state.recipes.filter(r => r.id !== action.payload);
         state.favorites = state.favorites.filter(r => r.id !== action.payload);
         state.recentRecipes = state.recentRecipes.filter(r => r.id !== action.payload);
         state.searchResults = state.searchResults.filter(r => r.id !== action.payload);
+        
+        // Clear current recipe if it's the deleted one
         if (state.currentRecipe?.id === action.payload) {
           state.currentRecipe = null;
         }
+        
+        console.log('Recipe removed from Redux state successfully');
       })
       .addCase(deleteRecipe.rejected, (state, action) => {
+        console.error('Delete recipe rejected:', action.error);
         state.loading = false;
         state.error = action.error.message || 'Failed to delete recipe';
       })

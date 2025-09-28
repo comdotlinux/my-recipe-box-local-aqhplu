@@ -1,10 +1,11 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Share } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Share, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import Toast from 'react-native-toast-message';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { commonStyles, colors, typography, spacing, borderRadius } from '../../styles/commonStyles';
 import { RootState, AppDispatch } from '../../store';
 import { loadRecipe, toggleFavorite, deleteRecipe } from '../../store/slices/recipesSlice';
@@ -113,6 +114,104 @@ export default function RecipeDetailScreen() {
                 position: 'bottom',
                 bottomOffset: 100,
               });
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleViewOriginalRecipe = async () => {
+    if (!currentRecipe?.source_url) {
+      Toast.show({
+        type: 'error',
+        text1: 'No Source URL',
+        text2: 'This recipe does not have an original source URL.',
+        position: 'bottom',
+        bottomOffset: 100,
+      });
+      return;
+    }
+
+    const url = currentRecipe.source_url;
+    console.log('Attempting to open URL:', url);
+
+    // Show action sheet to let user choose between opening or copying
+    Alert.alert(
+      'View Original Recipe',
+      `Would you like to open the link or copy it to clipboard?\n\n${url}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Copy Link',
+          onPress: async () => {
+            try {
+              await Clipboard.setString(url);
+              Toast.show({
+                type: 'success',
+                text1: 'Link Copied',
+                text2: 'The recipe URL has been copied to your clipboard.',
+                position: 'bottom',
+                bottomOffset: 100,
+              });
+            } catch (error) {
+              console.error('Failed to copy to clipboard:', error);
+              Toast.show({
+                type: 'error',
+                text1: 'Copy Failed',
+                text2: 'Could not copy the link to clipboard.',
+                position: 'bottom',
+                bottomOffset: 100,
+              });
+            }
+          },
+        },
+        {
+          text: 'Open Link',
+          onPress: async () => {
+            try {
+              const supported = await Linking.canOpenURL(url);
+              if (supported) {
+                await Linking.openURL(url);
+                Toast.show({
+                  type: 'success',
+                  text1: 'Opening Link',
+                  text2: 'The original recipe is opening in your browser.',
+                  position: 'bottom',
+                  bottomOffset: 100,
+                });
+              } else {
+                // If can't open, copy to clipboard as fallback
+                await Clipboard.setString(url);
+                Toast.show({
+                  type: 'info',
+                  text1: 'Link Copied',
+                  text2: 'Could not open the link, but it has been copied to your clipboard.',
+                  position: 'bottom',
+                  bottomOffset: 100,
+                });
+              }
+            } catch (error) {
+              console.error('Failed to open URL:', error);
+              // Fallback to copying
+              try {
+                await Clipboard.setString(url);
+                Toast.show({
+                  type: 'info',
+                  text1: 'Link Copied',
+                  text2: 'Could not open the link, but it has been copied to your clipboard.',
+                  position: 'bottom',
+                  bottomOffset: 100,
+                });
+              } catch (clipboardError) {
+                Toast.show({
+                  type: 'error',
+                  text1: 'Failed to Open Link',
+                  text2: 'Could not open or copy the link. Please try again.',
+                  position: 'bottom',
+                  bottomOffset: 100,
+                });
+              }
             }
           },
         },
@@ -422,16 +521,7 @@ export default function RecipeDetailScreen() {
             <View style={{ paddingHorizontal: spacing.md, marginBottom: spacing.lg }}>
               <TouchableOpacity
                 style={[commonStyles.card, commonStyles.row]}
-                onPress={() => {
-                  // TODO: Open URL in browser
-                  Toast.show({
-                    type: 'info',
-                    text1: 'Source URL',
-                    text2: currentRecipe.source_url || 'No URL available',
-                    position: 'bottom',
-                    bottomOffset: 100,
-                  });
-                }}
+                onPress={handleViewOriginalRecipe}
               >
                 <Icon name="link" size={20} color={colors.primary} />
                 <Text style={[typography.bodyMedium, { 

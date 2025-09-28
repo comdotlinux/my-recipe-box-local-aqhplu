@@ -9,25 +9,37 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Custom FAB component for the Add tab
 function AddTabButton({ children, onPress }: any) {
   return (
-    <TouchableOpacity
-      style={{
-        top: Platform.OS === 'ios' ? -10 : -20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: colors.primary,
-        shadowColor: colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-      }}
-      onPress={onPress}
-    >
-      <Icon name="add" size={28} color={colors.background} />
-    </TouchableOpacity>
+    <View style={{
+      position: 'absolute',
+      top: Platform.OS === 'ios' ? -15 : -25,
+      left: '50%',
+      marginLeft: -28, // Half of the button width (56/2)
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}>
+      <TouchableOpacity
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: colors.primary,
+          justifyContent: 'center',
+          alignItems: 'center',
+          shadowColor: colors.shadow,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+          // Add a white border to make it stand out
+          borderWidth: 3,
+          borderColor: colors.background,
+        }}
+        onPress={onPress}
+        activeOpacity={0.8}
+      >
+        <Icon name="add" size={28} color={colors.background} />
+      </TouchableOpacity>
+    </View>
   );
 }
 
