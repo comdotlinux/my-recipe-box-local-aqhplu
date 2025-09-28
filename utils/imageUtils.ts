@@ -1,5 +1,6 @@
 
 import * as FileSystem from 'expo-file-system';
+import { documentDirectory } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 export interface ImageInfo {
@@ -10,12 +11,11 @@ export interface ImageInfo {
 }
 
 export const createImagesDirectory = async (): Promise<string> => {
-  const documentsDirectory = FileSystem.documentDirectory;
-  if (!documentsDirectory) {
+  if (!documentDirectory) {
     throw new Error('Document directory not available');
   }
 
-  const imagesDir = `${documentsDirectory}images/`;
+  const imagesDir = `${documentDirectory}images/`;
   const dirInfo = await FileSystem.getInfoAsync(imagesDir);
   
   if (!dirInfo.exists) {
@@ -30,8 +30,7 @@ export const saveImageToAppDirectory = async (imageUri: string, recipeId?: strin
   try {
     console.log('Saving image to app directory:', imageUri);
     
-    const documentsDirectory = FileSystem.documentDirectory;
-    if (!documentsDirectory) {
+    if (!documentDirectory) {
       console.error('Document directory not available');
       return null;
     }

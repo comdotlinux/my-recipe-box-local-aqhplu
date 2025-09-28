@@ -3,6 +3,7 @@ import { AuthRequest, AuthRequestPromptOptions, makeRedirectUri } from 'expo-aut
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system';
+import { documentDirectory } from 'expo-file-system';
 import { Platform, Alert } from 'react-native';
 import { getAllRecipes, getUserPreference, setUserPreference, getMigrationInfo } from './database';
 import { Recipe } from '../types/Recipe';
@@ -231,11 +232,10 @@ class GoogleDriveBackup {
 
       // Create backup file
       const fileName = `backup_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
-      const documentsDirectory = FileSystem.documentDirectory;
-      if (!documentsDirectory) {
+      if (!documentDirectory) {
         throw new Error('Document directory not available');
       }
-      const fileUri = `${documentsDirectory}${fileName}`;
+      const fileUri = `${documentDirectory}${fileName}`;
       
       await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backupData));
 
