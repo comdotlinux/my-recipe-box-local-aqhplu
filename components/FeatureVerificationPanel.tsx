@@ -41,47 +41,7 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
   const [currentTest, setCurrentTest] = useState<string>('');
   const [isCreatingTestData, setIsCreatingTestData] = useState(false);
 
-  const runVerification = useCallback(async () => {
-    setIsRunning(true);
-    setResults([]);
-
-    try {
-      // 🚀 First Launch Tests
-      await verifyFirstLaunch();
-      
-      // 📱 Core Features Tests
-      await verifyCoreFeatures();
-      
-      // 🎨 UI/UX Tests
-      await verifyUIUX();
-      
-      // 🔄 Sharing Tests
-      await verifySharing();
-      
-      // ☁️ Backup Tests
-      await verifyBackup();
-      
-      // 🔢 Versioning Tests
-      await verifyVersioning();
-      
-      // 🎯 Performance Tests
-      await verifyPerformance();
-
-    } catch (error) {
-      console.error('Verification failed:', error);
-    } finally {
-      setIsRunning(false);
-      setCurrentTest('');
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isVisible && results.length === 0) {
-      runVerification();
-    }
-  }, [isVisible, results.length, runVerification]);
-
-  const updateResult = (category: string, feature: string, status: VerificationResult['status'], message?: string, details?: string) => {
+  const updateResult = useCallback((category: string, feature: string, status: VerificationResult['status'], message?: string, details?: string) => {
     setResults(prev => {
       const existing = prev.find(r => r.category === category && r.feature === feature);
       if (existing) {
@@ -93,9 +53,9 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
         return [...prev, { category, feature, status, message, details }];
       }
     });
-  };
+  }, []);
 
-  const verifyFirstLaunch = async () => {
+  const verifyFirstLaunch = useCallback(async () => {
     setCurrentTest('First Launch');
     
     // Database initialization
@@ -118,9 +78,9 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
     // Welcome screen (simulated)
     updateResult('First Launch', 'Welcome Screen', 'warning', 'Manual verification required');
     updateResult('First Launch', 'Restore from Backup', 'warning', 'Google Drive auth - manual verification required');
-  };
+  }, [updateResult]);
 
-  const verifyCoreFeatures = async () => {
+  const verifyCoreFeatures = useCallback(async () => {
     setCurrentTest('Core Features');
 
     // Recipe Input - Photo
@@ -194,9 +154,9 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
     } catch (error) {
       updateResult('Database & Storage', 'UTC Timestamps', 'fail', `Timestamp check failed: ${error}`);
     }
-  };
+  }, [updateResult]);
 
-  const verifyUIUX = async () => {
+  const verifyUIUX = useCallback(async () => {
     setCurrentTest('UI/UX');
 
     // Material Design 3
@@ -217,9 +177,9 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
     updateResult('Recipe Detail', 'Swipeable Gallery', 'warning', 'Single image support - gallery pending');
     updateResult('Recipe Detail', 'Ingredient Tabs', 'pass', 'Tabbed interface for ingredients/instructions');
     updateResult('Recipe Detail', 'Edit Button', 'pass', 'Edit functionality available');
-  };
+  }, [updateResult]);
 
-  const verifySharing = async () => {
+  const verifySharing = useCallback(async () => {
     setCurrentTest('Sharing');
 
     // Export Recipe
@@ -268,9 +228,9 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
     } catch (error) {
       updateResult('Import Recipe', 'Deep Link Parsing', 'fail', `Parse test failed: ${error}`);
     }
-  };
+  }, [updateResult]);
 
-  const verifyBackup = async () => {
+  const verifyBackup = useCallback(async () => {
     setCurrentTest('Backup');
 
     // Google Drive
@@ -293,9 +253,9 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
 
     updateResult('Auto-Backup', 'WiFi-only Setting', 'warning', 'Network condition checking - needs implementation');
     updateResult('Auto-Backup', 'Background Scheduling', 'warning', 'Background tasks - needs platform-specific implementation');
-  };
+  }, [updateResult]);
 
-  const verifyVersioning = async () => {
+  const verifyVersioning = useCallback(async () => {
     setCurrentTest('Versioning');
 
     // Migrations
@@ -315,9 +275,9 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
     updateResult('Compatibility', 'Backward Compatibility', 'pass', 'Transform functions for version migration');
     updateResult('Compatibility', 'Forward Compatibility', 'pass', 'Update required messages for newer versions');
     updateResult('Compatibility', 'Backup Versioning', 'pass', 'Backup metadata includes version info');
-  };
+  }, [updateResult]);
 
-  const verifyPerformance = async () => {
+  const verifyPerformance = useCallback(async () => {
     setCurrentTest('Performance');
 
     // App Launch (simulated)
@@ -361,7 +321,47 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
     updateResult('Performance', 'Offline Functionality', 'pass', 'SQLite + local storage - fully offline capable');
     updateResult('Performance', 'Image Loading', 'warning', 'Progressive loading - needs implementation');
     updateResult('Performance', 'Memory Management', 'warning', 'Manual verification required - test with 50+ recipes');
-  };
+  }, [updateResult]);
+
+  const runVerification = useCallback(async () => {
+    setIsRunning(true);
+    setResults([]);
+
+    try {
+      // 🚀 First Launch Tests
+      await verifyFirstLaunch();
+      
+      // 📱 Core Features Tests
+      await verifyCoreFeatures();
+      
+      // 🎨 UI/UX Tests
+      await verifyUIUX();
+      
+      // 🔄 Sharing Tests
+      await verifySharing();
+      
+      // ☁️ Backup Tests
+      await verifyBackup();
+      
+      // 🔢 Versioning Tests
+      await verifyVersioning();
+      
+      // 🎯 Performance Tests
+      await verifyPerformance();
+
+    } catch (error) {
+      console.error('Verification failed:', error);
+    } finally {
+      setIsRunning(false);
+      setCurrentTest('');
+    }
+  }, [verifyBackup, verifyCoreFeatures, verifyFirstLaunch, verifyPerformance, verifySharing, verifyUIUX, verifyVersioning]);
+
+  useEffect(() => {
+    if (isVisible && results.length === 0) {
+      runVerification();
+    }
+  }, [isVisible, results.length, runVerification]);
 
   const createTestData = async () => {
     try {
