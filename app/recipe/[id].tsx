@@ -20,6 +20,7 @@ export default function RecipeDetailScreen() {
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [showQRSheet, setShowQRSheet] = useState(false);
   const [qrData, setQRData] = useState<{ deepLink: string; recipe: any } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -70,7 +71,7 @@ export default function RecipeDetailScreen() {
   };
 
   const handleDeleteRecipe = () => {
-    if (!currentRecipe) return;
+    if (!currentRecipe || isDeleting) return;
 
     Alert.alert(
       'Delete Recipe',
@@ -81,9 +82,14 @@ export default function RecipeDetailScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            setIsDeleting(true);
             try {
               console.log('Deleting recipe:', currentRecipe.id);
+              
+              // Dispatch the delete action and wait for it to complete
               await dispatch(deleteRecipe(currentRecipe.id)).unwrap();
+              
+              console.log('Recipe deleted successfully');
               
               // Show success toast
               Toast.show({
@@ -94,12 +100,12 @@ export default function RecipeDetailScreen() {
                 bottomOffset: 100,
               });
               
-              // Navigate back after a short delay to let the toast show
-              setTimeout(() => {
-                router.back();
-              }, 500);
+              // Navigate back immediately after successful deletion
+              router.back();
+              
             } catch (error) {
               console.error('Failed to delete recipe:', error);
+              setIsDeleting(false);
               Toast.show({
                 type: 'error',
                 text1: 'Failed to Delete Recipe',
@@ -447,8 +453,10 @@ export default function RecipeDetailScreen() {
                 backgroundColor: colors.error + '10',
                 borderColor: colors.error,
                 borderWidth: 1,
+                opacity: isDeleting ? 0.6 : 1,
               }]}
               onPress={handleDeleteRecipe}
+              disabled={isDeleting}
             >
               <View style={[commonStyles.row, { justifyContent: 'center' }]}>
                 <Icon name="trash" size={20} color={colors.error} />
@@ -456,7 +464,7 @@ export default function RecipeDetailScreen() {
                   color: colors.error, 
                   marginLeft: spacing.sm 
                 }]}>
-                  Delete Recipe
+                  {isDeleting ? 'Deleting...' : 'Delete Recipe'}
                 </Text>
               </View>
             </TouchableOpacity>

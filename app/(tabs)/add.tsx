@@ -18,6 +18,7 @@ export default function AddRecipeScreen() {
   const [activeTab, setActiveTab] = useState<'photo' | 'url' | 'manual'>('manual');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -184,6 +185,8 @@ export default function AddRecipeScreen() {
   };
 
   const handleSaveRecipe = async () => {
+    if (isSaving) return;
+    
     console.log('Saving recipe with data:', { 
       title: formData.title, 
       source_url: formData.source_url,
@@ -214,6 +217,8 @@ export default function AddRecipeScreen() {
       });
       return;
     }
+
+    setIsSaving(true);
 
     try {
       const recipeData: Omit<Recipe, 'id' | 'created_at' | 'modified_at'> = {
@@ -248,17 +253,17 @@ export default function AddRecipeScreen() {
       Toast.show({
         type: 'success',
         text1: 'Recipe Saved!',
-        text2: 'Your recipe has been added to your collection.',
+        text2: `"${recipeData.title}" has been added to your collection.`,
         position: 'bottom',
         bottomOffset: 100,
       });
       
-      // Navigate back after a short delay to let the toast show
-      setTimeout(() => {
-        router.back();
-      }, 500);
+      // Navigate back immediately after successful save
+      router.back();
+      
     } catch (error) {
       console.error('Failed to save recipe:', error);
+      setIsSaving(false);
       Toast.show({
         type: 'error',
         text1: 'Failed to Save Recipe',
@@ -684,10 +689,16 @@ export default function AddRecipeScreen() {
             borderTopColor: colors.outline,
           }}>
             <TouchableOpacity
-              style={[commonStyles.button, { width: '100%' }]}
+              style={[commonStyles.button, { 
+                width: '100%',
+                opacity: isSaving ? 0.6 : 1,
+              }]}
               onPress={handleSaveRecipe}
+              disabled={isSaving}
             >
-              <Text style={commonStyles.buttonText}>Save Recipe</Text>
+              <Text style={commonStyles.buttonText}>
+                {isSaving ? 'Saving Recipe...' : 'Save Recipe'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
