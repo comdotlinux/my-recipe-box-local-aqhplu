@@ -128,11 +128,20 @@ export default function AddRecipeScreen() {
   const handleSaveRecipe = async () => {
     console.log('Saving recipe with data:', { 
       title: formData.title, 
+      source_url: formData.source_url,
+      activeTab,
       hasImage: !!selectedImage 
     });
     
+    // Validate required fields
     if (!formData.title.trim()) {
-      Alert.alert('Missing title', 'Please enter a recipe title.');
+      Alert.alert('Missing title', 'Please enter a recipe title to save your recipe.');
+      return;
+    }
+
+    // For URL tab, ensure we have either a URL or some content
+    if (activeTab === 'url' && !formData.source_url.trim() && !formData.description.trim() && !formData.notes.trim()) {
+      Alert.alert('Missing content', 'Please add a URL or some recipe details to save.');
       return;
     }
 
@@ -161,8 +170,9 @@ export default function AddRecipeScreen() {
         console.log('Added image reference to recipe notes');
       }
 
-      await dispatch(createRecipe(recipeData)).unwrap();
-      console.log('Recipe saved successfully');
+      console.log('Dispatching createRecipe with data:', recipeData);
+      const result = await dispatch(createRecipe(recipeData)).unwrap();
+      console.log('Recipe saved successfully with result:', result);
       
       Alert.alert(
         'Recipe saved!',
@@ -171,7 +181,7 @@ export default function AddRecipeScreen() {
       );
     } catch (error) {
       console.error('Failed to save recipe:', error);
-      Alert.alert('Error', 'Failed to save recipe. Please try again.');
+      Alert.alert('Error', `Failed to save recipe: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
     }
   };
 
@@ -268,20 +278,65 @@ export default function AddRecipeScreen() {
   const renderUrlTab = () => (
     <View>
       <Text style={[typography.titleMedium, { marginBottom: spacing.md }]}>
-        Import from URL
+        Save Recipe from URL
+      </Text>
+      
+      {/* Title - Required */}
+      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+        Recipe Title *
       </Text>
       <TextInput
         style={[commonStyles.input, { marginBottom: spacing.md }]}
-        placeholder="Paste recipe URL here..."
+        placeholder="Enter a name for this recipe"
+        placeholderTextColor={colors.textSecondary}
+        value={formData.title}
+        onChangeText={(value) => handleInputChange('title', value)}
+      />
+      
+      {/* URL */}
+      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+        Recipe URL
+      </Text>
+      <TextInput
+        style={[commonStyles.input, { marginBottom: spacing.md }]}
+        placeholder="https://example.com/recipe"
         placeholderTextColor={colors.textSecondary}
         value={formData.source_url}
         onChangeText={(value) => handleInputChange('source_url', value)}
         keyboardType="url"
         autoCapitalize="none"
       />
-      <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
-        We'll try to extract recipe information from the URL automatically.
+      
+      {/* Description/Notes */}
+      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+        Notes (Optional)
       </Text>
+      <TextInput
+        style={[commonStyles.input, { marginBottom: spacing.md, minHeight: 100 }]}
+        placeholder="Add any notes about this recipe..."
+        placeholderTextColor={colors.textSecondary}
+        value={formData.notes}
+        onChangeText={(value) => handleInputChange('notes', value)}
+        multiline
+        textAlignVertical="top"
+      />
+      
+      <View style={{
+        backgroundColor: colors.surface,
+        padding: spacing.md,
+        borderRadius: borderRadius.md,
+        marginTop: spacing.md,
+      }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+          <Icon name="information-circle" size={20} color={colors.primary} />
+          <Text style={[typography.labelMedium, { marginLeft: spacing.sm, color: colors.primary }]}>
+            Quick Save
+          </Text>
+        </View>
+        <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
+          This will save the URL and your notes. You can always edit the recipe later to add more details like ingredients and instructions.
+        </Text>
+      </View>
     </View>
   );
 
@@ -426,6 +481,20 @@ export default function AddRecipeScreen() {
           />
         </View>
       </View>
+
+      {/* Source URL */}
+      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+        Source URL (Optional)
+      </Text>
+      <TextInput
+        style={[commonStyles.input, { marginBottom: spacing.md }]}
+        placeholder="https://example.com/recipe"
+        placeholderTextColor={colors.textSecondary}
+        value={formData.source_url}
+        onChangeText={(value) => handleInputChange('source_url', value)}
+        keyboardType="url"
+        autoCapitalize="none"
+      />
 
       {/* Ingredients */}
       <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
