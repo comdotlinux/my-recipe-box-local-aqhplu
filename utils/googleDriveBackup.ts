@@ -2,7 +2,7 @@
 import { AuthRequest, AuthRequestPromptOptions, makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
-import { documentDirectory, writeAsStringAsync, readAsStringAsync, deleteAsync, getInfoAsync, makeDirectoryAsync } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 import { Platform, Alert } from 'react-native';
 import { getAllRecipes, getUserPreference, setUserPreference, getMigrationInfo } from './database';
 import { Recipe } from '../types/Recipe';
@@ -231,12 +231,12 @@ class GoogleDriveBackup {
 
       // Create backup file
       const fileName = `backup_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
-      if (!documentDirectory) {
+      if (!FileSystem.documentDirectory) {
         throw new Error('Document directory not available');
       }
-      const fileUri = `${documentDirectory}${fileName}`;
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
       
-      await writeAsStringAsync(fileUri, JSON.stringify(backupData));
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backupData));
 
       onProgress?.(70);
 
@@ -245,7 +245,7 @@ class GoogleDriveBackup {
       
       if (success) {
         // Clean up local file
-        await deleteAsync(fileUri, { idempotent: true });
+        await FileSystem.deleteAsync(fileUri, { idempotent: true });
         
         // Update last backup timestamp
         await setUserPreference('lastBackup', Date.now().toString());
@@ -269,7 +269,7 @@ class GoogleDriveBackup {
   private async uploadBackupFile(fileUri: string, fileName: string): Promise<boolean> {
     try {
       // Read file content
-      const fileContent = await readAsStringAsync(fileUri);
+      const fileContent = await FileSystem.readAsStringAsync(fileUri);
       
       // Create file metadata
       const metadata = {

@@ -11,6 +11,7 @@ import { getUserPreference, setUserPreference, getMigrationInfo } from '../../ut
 import Icon from '../../components/Icon';
 import PlatformNotice from '../../components/PlatformNotice';
 import DatabaseTestPanel from '../../components/DatabaseTestPanel';
+import FeatureVerificationPanel from '../../components/FeatureVerificationPanel';
 import VersionCompatibilityInfo from '../../components/VersionCompatibilityInfo';
 import { getVersionMatrix } from '../../utils/backupVersioning';
 
@@ -21,6 +22,7 @@ export default function SettingsScreen() {
   const [autoBackup, setAutoBackup] = useState(false);
   const [showTestPanel, setShowTestPanel] = useState(false);
   const [showVersionMatrix, setShowVersionMatrix] = useState(false);
+  const [showFeatureVerification, setShowFeatureVerification] = useState(false);
   const [currentVersion, setCurrentVersion] = useState(1);
 
   useEffect(() => {
@@ -280,6 +282,13 @@ export default function SettingsScreen() {
                 'flask',
                 () => setShowTestPanel(true)
               )}
+              
+              {renderSettingItem(
+                'Feature Verification',
+                'Comprehensive feature checklist verification',
+                'checkmark-done',
+                () => setShowFeatureVerification(true)
+              )}
             </View>
           )}
 
@@ -332,6 +341,11 @@ export default function SettingsScreen() {
       <DatabaseTestPanel 
         isVisible={showTestPanel}
         onClose={() => setShowTestPanel(false)}
+      />
+      
+      <FeatureVerificationPanel
+        isVisible={showFeatureVerification}
+        onClose={() => setShowFeatureVerification(false)}
       />
     </SafeAreaView>
   );
