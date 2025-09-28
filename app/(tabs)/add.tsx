@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { router } from 'expo-router';
@@ -15,7 +15,6 @@ import { saveImageToAppDirectory, getImageDisplayUri } from '../../utils/imageUt
 
 export default function AddRecipeScreen() {
   const dispatch = useDispatch<AppDispatch>();
-  const [activeTab, setActiveTab] = useState<'photo' | 'url' | 'manual'>('manual');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -190,28 +189,15 @@ export default function AddRecipeScreen() {
     console.log('Saving recipe with data:', { 
       title: formData.title, 
       source_url: formData.source_url,
-      activeTab,
       hasImage: !!selectedImage 
     });
     
-    // Validate required fields
+    // Validate required fields - only title is mandatory
     if (!formData.title.trim()) {
       Toast.show({
         type: 'error',
         text1: 'Missing Title',
         text2: 'Please enter a recipe title to save your recipe.',
-        position: 'bottom',
-        bottomOffset: 100,
-      });
-      return;
-    }
-
-    // For URL tab, ensure we have either a URL or some content
-    if (activeTab === 'url' && !formData.source_url.trim() && !formData.description.trim() && !formData.notes.trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Content',
-        text2: 'Please add a URL or some recipe details to save.',
         position: 'bottom',
         bottomOffset: 100,
       });
@@ -274,373 +260,6 @@ export default function AddRecipeScreen() {
     }
   };
 
-  const renderTabButton = (tab: 'photo' | 'url' | 'manual', label: string, icon: string) => (
-    <TouchableOpacity
-      style={{
-        flex: 1,
-        paddingVertical: spacing.md,
-        alignItems: 'center',
-        backgroundColor: activeTab === tab ? colors.primary : colors.surface,
-        borderRadius: borderRadius.md,
-        marginHorizontal: spacing.xs,
-      }}
-      onPress={() => setActiveTab(tab)}
-    >
-      <Icon 
-        name={icon as any} 
-        size={20} 
-        color={activeTab === tab ? colors.background : colors.text} 
-      />
-      <Text style={{
-        ...typography.labelMedium,
-        color: activeTab === tab ? colors.background : colors.text,
-        marginTop: spacing.xs,
-      }}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  const renderPhotoTab = () => (
-    <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-      {selectedImage ? (
-        <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
-          <Image
-            source={{ uri: getImageDisplayUri(selectedImage) }}
-            style={{
-              width: 200,
-              height: 150,
-              borderRadius: borderRadius.md,
-              marginBottom: spacing.md,
-            }}
-            resizeMode="cover"
-          />
-          <TouchableOpacity
-            style={[buttonStyles.secondary, { paddingHorizontal: spacing.lg }]}
-            onPress={handleRemoveImage}
-          >
-            <Text style={[commonStyles.buttonText, { color: colors.text }]}>
-              Remove Image
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <>
-          <Icon name="camera" size={64} color={colors.textSecondary} />
-          <Text style={[typography.titleMedium, { marginTop: spacing.md, marginBottom: spacing.sm }]}>
-            Add Recipe Photo
-          </Text>
-          <Text style={[typography.bodyMedium, { 
-            color: colors.textSecondary, 
-            textAlign: 'center',
-            marginBottom: spacing.lg 
-          }]}>
-            Take a photo or select from your gallery
-          </Text>
-        </>
-      )}
-      
-      <View style={{ flexDirection: 'row', gap: spacing.md, width: '100%' }}>
-        <TouchableOpacity
-          style={[commonStyles.button, { flex: 1, opacity: isProcessingImage ? 0.6 : 1 }]}
-          onPress={handleTakePhoto}
-          disabled={isProcessingImage}
-        >
-          <Text style={commonStyles.buttonText}>
-            {isProcessingImage ? 'Processing...' : 'Take Photo'}
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[buttonStyles.secondary, { flex: 1, opacity: isProcessingImage ? 0.6 : 1 }]}
-          onPress={handlePickImage}
-          disabled={isProcessingImage}
-        >
-          <Text style={[commonStyles.buttonText, { color: colors.text }]}>
-            {isProcessingImage ? 'Processing...' : 'Choose Photo'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderUrlTab = () => (
-    <View>
-      <Text style={[typography.titleMedium, { marginBottom: spacing.md }]}>
-        Save Recipe from URL
-      </Text>
-      
-      {/* Title - Required */}
-      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-        Recipe Title *
-      </Text>
-      <TextInput
-        style={[commonStyles.input, { marginBottom: spacing.md }]}
-        placeholder="Enter a name for this recipe"
-        placeholderTextColor={colors.textSecondary}
-        value={formData.title}
-        onChangeText={(value) => handleInputChange('title', value)}
-      />
-      
-      {/* URL */}
-      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-        Recipe URL
-      </Text>
-      <TextInput
-        style={[commonStyles.input, { marginBottom: spacing.md }]}
-        placeholder="https://example.com/recipe"
-        placeholderTextColor={colors.textSecondary}
-        value={formData.source_url}
-        onChangeText={(value) => handleInputChange('source_url', value)}
-        keyboardType="url"
-        autoCapitalize="none"
-      />
-      
-      {/* Description/Notes */}
-      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-        Notes (Optional)
-      </Text>
-      <TextInput
-        style={[commonStyles.input, { marginBottom: spacing.md, minHeight: 100 }]}
-        placeholder="Add any notes about this recipe..."
-        placeholderTextColor={colors.textSecondary}
-        value={formData.notes}
-        onChangeText={(value) => handleInputChange('notes', value)}
-        multiline
-        textAlignVertical="top"
-      />
-      
-      <View style={{
-        backgroundColor: colors.surface,
-        padding: spacing.md,
-        borderRadius: borderRadius.md,
-        marginTop: spacing.md,
-      }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-          <Icon name="information-circle" size={20} color={colors.primary} />
-          <Text style={[typography.labelMedium, { marginLeft: spacing.sm, color: colors.primary }]}>
-            Quick Save
-          </Text>
-        </View>
-        <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
-          This will save the URL and your notes. You can always edit the recipe later to add more details like ingredients and instructions.
-        </Text>
-      </View>
-    </View>
-  );
-
-  const renderManualTab = () => (
-    <View>
-      <Text style={[typography.titleMedium, { marginBottom: spacing.md }]}>
-        Recipe Details
-      </Text>
-      
-      {/* Show selected image preview in manual tab too */}
-      {selectedImage && (
-        <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
-          <Image
-            source={{ uri: getImageDisplayUri(selectedImage) }}
-            style={{
-              width: 120,
-              height: 90,
-              borderRadius: borderRadius.md,
-              marginBottom: spacing.sm,
-            }}
-            resizeMode="cover"
-          />
-          <TouchableOpacity onPress={handleRemoveImage}>
-            <Text style={[typography.labelMedium, { color: colors.primary }]}>
-              Remove Image
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      
-      {/* Title */}
-      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-        Title *
-      </Text>
-      <TextInput
-        style={[commonStyles.input, { marginBottom: spacing.md }]}
-        placeholder="Recipe name"
-        placeholderTextColor={colors.textSecondary}
-        value={formData.title}
-        onChangeText={(value) => handleInputChange('title', value)}
-      />
-
-      {/* Description */}
-      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-        Description
-      </Text>
-      <TextInput
-        style={[commonStyles.input, { marginBottom: spacing.md, minHeight: 80 }]}
-        placeholder="Brief description of the recipe"
-        placeholderTextColor={colors.textSecondary}
-        value={formData.description}
-        onChangeText={(value) => handleInputChange('description', value)}
-        multiline
-        textAlignVertical="top"
-      />
-
-      {/* Time and Servings Row */}
-      <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
-        <View style={{ flex: 1 }}>
-          <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-            Prep Time (min)
-          </Text>
-          <TextInput
-            style={commonStyles.input}
-            placeholder="30"
-            placeholderTextColor={colors.textSecondary}
-            value={formData.prep_time}
-            onChangeText={(value) => handleInputChange('prep_time', value)}
-            keyboardType="numeric"
-          />
-        </View>
-        
-        <View style={{ flex: 1 }}>
-          <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-            Cook Time (min)
-          </Text>
-          <TextInput
-            style={commonStyles.input}
-            placeholder="45"
-            placeholderTextColor={colors.textSecondary}
-            value={formData.cook_time}
-            onChangeText={(value) => handleInputChange('cook_time', value)}
-            keyboardType="numeric"
-          />
-        </View>
-        
-        <View style={{ flex: 1 }}>
-          <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-            Servings
-          </Text>
-          <TextInput
-            style={commonStyles.input}
-            placeholder="4"
-            placeholderTextColor={colors.textSecondary}
-            value={formData.servings}
-            onChangeText={(value) => handleInputChange('servings', value)}
-            keyboardType="numeric"
-          />
-        </View>
-      </View>
-
-      {/* Difficulty and Cuisine Row */}
-      <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
-        <View style={{ flex: 1 }}>
-          <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-            Difficulty
-          </Text>
-          <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-            {(['Easy', 'Medium', 'Hard'] as const).map((level) => (
-              <TouchableOpacity
-                key={level}
-                style={{
-                  flex: 1,
-                  paddingVertical: spacing.sm,
-                  alignItems: 'center',
-                  backgroundColor: formData.difficulty === level ? colors.primary : colors.surface,
-                  borderRadius: borderRadius.sm,
-                }}
-                onPress={() => handleInputChange('difficulty', level)}
-              >
-                <Text style={{
-                  ...typography.labelMedium,
-                  color: formData.difficulty === level ? colors.background : colors.text,
-                }}>
-                  {level}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-        
-        <View style={{ flex: 1 }}>
-          <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-            Cuisine
-          </Text>
-          <TextInput
-            style={commonStyles.input}
-            placeholder="Italian, Mexican, etc."
-            placeholderTextColor={colors.textSecondary}
-            value={formData.cuisine}
-            onChangeText={(value) => handleInputChange('cuisine', value)}
-          />
-        </View>
-      </View>
-
-      {/* Source URL */}
-      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-        Source URL (Optional)
-      </Text>
-      <TextInput
-        style={[commonStyles.input, { marginBottom: spacing.md }]}
-        placeholder="https://example.com/recipe"
-        placeholderTextColor={colors.textSecondary}
-        value={formData.source_url}
-        onChangeText={(value) => handleInputChange('source_url', value)}
-        keyboardType="url"
-        autoCapitalize="none"
-      />
-
-      {/* Ingredients */}
-      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-        Ingredients
-      </Text>
-      <TextInput
-        style={[commonStyles.input, { marginBottom: spacing.md, minHeight: 120 }]}
-        placeholder="List ingredients, one per line"
-        placeholderTextColor={colors.textSecondary}
-        value={formData.ingredients}
-        onChangeText={(value) => handleInputChange('ingredients', value)}
-        multiline
-        textAlignVertical="top"
-      />
-
-      {/* Instructions */}
-      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-        Instructions
-      </Text>
-      <TextInput
-        style={[commonStyles.input, { marginBottom: spacing.md, minHeight: 120 }]}
-        placeholder="Step-by-step cooking instructions"
-        placeholderTextColor={colors.textSecondary}
-        value={formData.instructions}
-        onChangeText={(value) => handleInputChange('instructions', value)}
-        multiline
-        textAlignVertical="top"
-      />
-
-      {/* Tags */}
-      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-        Tags
-      </Text>
-      <TextInput
-        style={[commonStyles.input, { marginBottom: spacing.md }]}
-        placeholder="vegetarian, quick, healthy (comma separated)"
-        placeholderTextColor={colors.textSecondary}
-        value={formData.tags}
-        onChangeText={(value) => handleInputChange('tags', value)}
-      />
-
-      {/* Notes */}
-      <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
-        Notes
-      </Text>
-      <TextInput
-        style={[commonStyles.input, { marginBottom: spacing.xl, minHeight: 80 }]}
-        placeholder="Additional notes or tips"
-        placeholderTextColor={colors.textSecondary}
-        value={formData.notes}
-        onChangeText={(value) => handleInputChange('notes', value)}
-        multiline
-        textAlignVertical="top"
-      />
-    </View>
-  );
-
   return (
     <SafeAreaView style={commonStyles.safeArea}>
       <KeyboardAvoidingView 
@@ -651,18 +270,11 @@ export default function AddRecipeScreen() {
         <View style={commonStyles.container}>
           {/* Header */}
           <View style={{ padding: spacing.md, paddingBottom: spacing.sm }}>
-            <View style={[commonStyles.spaceBetween, { marginBottom: spacing.md }]}>
+            <View style={[commonStyles.spaceBetween, { marginBottom: spacing.lg }]}>
               <Text style={typography.headlineMedium}>Add Recipe</Text>
               <TouchableOpacity onPress={() => router.back()}>
                 <Icon name="close" size={24} color={colors.text} />
               </TouchableOpacity>
-            </View>
-
-            {/* Tab Buttons */}
-            <View style={{ flexDirection: 'row', marginBottom: spacing.md }}>
-              {renderTabButton('photo', 'Photo', 'camera')}
-              {renderTabButton('url', 'URL', 'link')}
-              {renderTabButton('manual', 'Manual', 'create')}
             </View>
           </View>
 
@@ -675,9 +287,280 @@ export default function AddRecipeScreen() {
             }}
             showsVerticalScrollIndicator={false}
           >
-            {activeTab === 'photo' && renderPhotoTab()}
-            {activeTab === 'url' && renderUrlTab()}
-            {activeTab === 'manual' && renderManualTab()}
+            {/* Photo Section */}
+            <View style={{ marginBottom: spacing.lg }}>
+              <Text style={[typography.titleMedium, { marginBottom: spacing.md }]}>
+                Recipe Photo (Optional)
+              </Text>
+              
+              {selectedImage ? (
+                <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
+                  <Image
+                    source={{ uri: getImageDisplayUri(selectedImage) }}
+                    style={{
+                      width: 200,
+                      height: 150,
+                      borderRadius: borderRadius.md,
+                      marginBottom: spacing.md,
+                    }}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    style={[buttonStyles.secondary, { paddingHorizontal: spacing.lg }]}
+                    onPress={handleRemoveImage}
+                  >
+                    <Text style={[commonStyles.buttonText, { color: colors.text }]}>
+                      Remove Image
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
+                  <View style={{
+                    width: 200,
+                    height: 150,
+                    backgroundColor: colors.surfaceVariant,
+                    borderRadius: borderRadius.md,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginBottom: spacing.md,
+                  }}>
+                    <Icon name="camera" size={48} color={colors.textSecondary} />
+                    <Text style={[typography.bodySmall, { color: colors.textSecondary, marginTop: spacing.sm }]}>
+                      Add a photo
+                    </Text>
+                  </View>
+                </View>
+              )}
+              
+              <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                <TouchableOpacity
+                  style={[commonStyles.button, { flex: 1, opacity: isProcessingImage ? 0.6 : 1 }]}
+                  onPress={handleTakePhoto}
+                  disabled={isProcessingImage}
+                >
+                  <Text style={commonStyles.buttonText}>
+                    {isProcessingImage ? 'Processing...' : 'Take Photo'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[buttonStyles.secondary, { flex: 1, opacity: isProcessingImage ? 0.6 : 1 }]}
+                  onPress={handlePickImage}
+                  disabled={isProcessingImage}
+                >
+                  <Text style={[commonStyles.buttonText, { color: colors.text }]}>
+                    {isProcessingImage ? 'Processing...' : 'Choose Photo'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Recipe Details */}
+            <Text style={[typography.titleMedium, { marginBottom: spacing.md }]}>
+              Recipe Details
+            </Text>
+            
+            {/* Title - Required */}
+            <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+              Title *
+            </Text>
+            <TextInput
+              style={[commonStyles.input, { marginBottom: spacing.md }]}
+              placeholder="Recipe name"
+              placeholderTextColor={colors.textSecondary}
+              value={formData.title}
+              onChangeText={(value) => handleInputChange('title', value)}
+            />
+
+            {/* Description */}
+            <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+              Description (Optional)
+            </Text>
+            <TextInput
+              style={[commonStyles.input, { marginBottom: spacing.md, minHeight: 80 }]}
+              placeholder="Brief description of the recipe"
+              placeholderTextColor={colors.textSecondary}
+              value={formData.description}
+              onChangeText={(value) => handleInputChange('description', value)}
+              multiline
+              textAlignVertical="top"
+            />
+
+            {/* Source URL */}
+            <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+              Source URL (Optional)
+            </Text>
+            <TextInput
+              style={[commonStyles.input, { marginBottom: spacing.md }]}
+              placeholder="https://example.com/recipe"
+              placeholderTextColor={colors.textSecondary}
+              value={formData.source_url}
+              onChangeText={(value) => handleInputChange('source_url', value)}
+              keyboardType="url"
+              autoCapitalize="none"
+            />
+
+            {/* Time and Servings Row */}
+            <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+                  Prep Time (min)
+                </Text>
+                <TextInput
+                  style={commonStyles.input}
+                  placeholder="30"
+                  placeholderTextColor={colors.textSecondary}
+                  value={formData.prep_time}
+                  onChangeText={(value) => handleInputChange('prep_time', value)}
+                  keyboardType="numeric"
+                />
+              </View>
+              
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+                  Cook Time (min)
+                </Text>
+                <TextInput
+                  style={commonStyles.input}
+                  placeholder="45"
+                  placeholderTextColor={colors.textSecondary}
+                  value={formData.cook_time}
+                  onChangeText={(value) => handleInputChange('cook_time', value)}
+                  keyboardType="numeric"
+                />
+              </View>
+              
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+                  Servings
+                </Text>
+                <TextInput
+                  style={commonStyles.input}
+                  placeholder="4"
+                  placeholderTextColor={colors.textSecondary}
+                  value={formData.servings}
+                  onChangeText={(value) => handleInputChange('servings', value)}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {/* Difficulty and Cuisine Row */}
+            <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+                  Difficulty (Optional)
+                </Text>
+                <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+                  {(['Easy', 'Medium', 'Hard'] as const).map((level) => (
+                    <TouchableOpacity
+                      key={level}
+                      style={{
+                        flex: 1,
+                        paddingVertical: spacing.sm,
+                        alignItems: 'center',
+                        backgroundColor: formData.difficulty === level ? colors.primary : colors.surface,
+                        borderRadius: borderRadius.sm,
+                      }}
+                      onPress={() => handleInputChange('difficulty', level)}
+                    >
+                      <Text style={{
+                        ...typography.labelMedium,
+                        color: formData.difficulty === level ? colors.background : colors.text,
+                      }}>
+                        {level}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+                  Cuisine (Optional)
+                </Text>
+                <TextInput
+                  style={commonStyles.input}
+                  placeholder="Italian, Mexican, etc."
+                  placeholderTextColor={colors.textSecondary}
+                  value={formData.cuisine}
+                  onChangeText={(value) => handleInputChange('cuisine', value)}
+                />
+              </View>
+            </View>
+
+            {/* Ingredients */}
+            <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+              Ingredients (Optional)
+            </Text>
+            <TextInput
+              style={[commonStyles.input, { marginBottom: spacing.md, minHeight: 120 }]}
+              placeholder="List ingredients, one per line"
+              placeholderTextColor={colors.textSecondary}
+              value={formData.ingredients}
+              onChangeText={(value) => handleInputChange('ingredients', value)}
+              multiline
+              textAlignVertical="top"
+            />
+
+            {/* Instructions */}
+            <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+              Instructions (Optional)
+            </Text>
+            <TextInput
+              style={[commonStyles.input, { marginBottom: spacing.md, minHeight: 120 }]}
+              placeholder="Step-by-step cooking instructions"
+              placeholderTextColor={colors.textSecondary}
+              value={formData.instructions}
+              onChangeText={(value) => handleInputChange('instructions', value)}
+              multiline
+              textAlignVertical="top"
+            />
+
+            {/* Tags */}
+            <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+              Tags (Optional)
+            </Text>
+            <TextInput
+              style={[commonStyles.input, { marginBottom: spacing.md }]}
+              placeholder="vegetarian, quick, healthy (comma separated)"
+              placeholderTextColor={colors.textSecondary}
+              value={formData.tags}
+              onChangeText={(value) => handleInputChange('tags', value)}
+            />
+
+            {/* Notes */}
+            <Text style={[typography.labelLarge, { marginBottom: spacing.xs }]}>
+              Notes (Optional)
+            </Text>
+            <TextInput
+              style={[commonStyles.input, { marginBottom: spacing.xl, minHeight: 80 }]}
+              placeholder="Additional notes or tips"
+              placeholderTextColor={colors.textSecondary}
+              value={formData.notes}
+              onChangeText={(value) => handleInputChange('notes', value)}
+              multiline
+              textAlignVertical="top"
+            />
+
+            {/* Info Box */}
+            <View style={{
+              backgroundColor: colors.surface,
+              padding: spacing.md,
+              borderRadius: borderRadius.md,
+              marginBottom: spacing.lg,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+                <Icon name="information-circle" size={20} color={colors.primary} />
+                <Text style={[typography.labelMedium, { marginLeft: spacing.sm, color: colors.primary }]}>
+                  Recipe Information
+                </Text>
+              </View>
+              <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
+                Only the recipe title is required. All other fields are optional and can be added later by editing the recipe.
+              </Text>
+            </View>
           </ScrollView>
 
           {/* Save Button */}

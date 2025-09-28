@@ -1,8 +1,7 @@
-
 {
   "expo": {
-    "name": "MyRecipeBox",
-    "slug": "myrecipebox",
+    "name": "my-recipe-box-local-aqhplu",
+    "slug": "my-recipe-box-local-aqhplu",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/final_quest_240x240.png",
@@ -24,7 +23,7 @@
         "foregroundImage": "./assets/images/final_quest_240x240.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.myrecipebox.app"
+      "package": "com.linux.myrecipebox"
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",
