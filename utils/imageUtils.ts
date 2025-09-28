@@ -1,5 +1,5 @@
 
-import * as FileSystem from 'expo-file-system';
+import { documentDirectory, getInfoAsync, makeDirectoryAsync, copyAsync, deleteAsync, readDirectoryAsync, writeAsStringAsync, readAsStringAsync } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 export interface ImageInfo {
@@ -10,15 +10,15 @@ export interface ImageInfo {
 }
 
 export const createImagesDirectory = async (): Promise<string> => {
-  if (!FileSystem.documentDirectory) {
+  if (!documentDirectory) {
     throw new Error('Document directory not available');
   }
 
-  const imagesDir = `${FileSystem.documentDirectory}images/`;
-  const dirInfo = await FileSystem.getInfoAsync(imagesDir);
+  const imagesDir = `${documentDirectory}images/`;
+  const dirInfo = await getInfoAsync(imagesDir);
   
   if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(imagesDir, { intermediates: true });
+    await makeDirectoryAsync(imagesDir, { intermediates: true });
     console.log('Created images directory:', imagesDir);
   }
   
@@ -29,7 +29,7 @@ export const saveImageToAppDirectory = async (imageUri: string, recipeId?: strin
   try {
     console.log('Saving image to app directory:', imageUri);
     
-    if (!FileSystem.documentDirectory) {
+    if (!documentDirectory) {
       console.error('Document directory not available');
       return null;
     }
@@ -43,7 +43,7 @@ export const saveImageToAppDirectory = async (imageUri: string, recipeId?: strin
     const newPath = `${imagesDir}${filename}`;
 
     // Copy image to app directory
-    await FileSystem.copyAsync({
+    await copyAsync({
       from: imageUri,
       to: newPath,
     });
@@ -58,9 +58,9 @@ export const saveImageToAppDirectory = async (imageUri: string, recipeId?: strin
 
 export const deleteImage = async (imagePath: string): Promise<boolean> => {
   try {
-    const fileInfo = await FileSystem.getInfoAsync(imagePath);
+    const fileInfo = await getInfoAsync(imagePath);
     if (fileInfo.exists) {
-      await FileSystem.deleteAsync(imagePath);
+      await deleteAsync(imagePath);
       console.log('Image deleted:', imagePath);
       return true;
     }
@@ -73,7 +73,7 @@ export const deleteImage = async (imagePath: string): Promise<boolean> => {
 
 export const getImageInfo = async (imagePath: string): Promise<ImageInfo | null> => {
   try {
-    const fileInfo = await FileSystem.getInfoAsync(imagePath);
+    const fileInfo = await getInfoAsync(imagePath);
     if (!fileInfo.exists) {
       return null;
     }
@@ -146,7 +146,7 @@ export const getImageDisplayUri = (imagePath: string): string => {
 export const cleanupOrphanedImages = async (usedImagePaths: string[]): Promise<void> => {
   try {
     const imagesDir = await createImagesDirectory();
-    const files = await FileSystem.readDirectoryAsync(imagesDir);
+    const files = await readDirectoryAsync(imagesDir);
     
     for (const file of files) {
       const fullPath = `${imagesDir}${file}`;

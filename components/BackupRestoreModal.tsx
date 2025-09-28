@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView, Alert } from 'react-native';
 import { commonStyles, colors, typography, spacing, borderRadius } from '../styles/commonStyles';
 import Icon from './Icon';
@@ -29,13 +29,7 @@ const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
   const [compatibility, setCompatibility] = useState<any>(null);
   const [validation, setValidation] = useState<any>(null);
 
-  useEffect(() => {
-    if (isVisible) {
-      loadCompatibilityInfo();
-    }
-  }, [isVisible, backupMetadata]);
-
-  const loadCompatibilityInfo = async () => {
+  const loadCompatibilityInfo = useCallback(async () => {
     try {
       const migrationInfo = await getMigrationInfo();
       setCurrentVersion(migrationInfo.currentVersion);
@@ -48,7 +42,13 @@ const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
     } catch (error) {
       console.error('Failed to load compatibility info:', error);
     }
-  };
+  }, [backupMetadata, backupData]);
+
+  useEffect(() => {
+    if (isVisible) {
+      loadCompatibilityInfo();
+    }
+  }, [isVisible, loadCompatibilityInfo]);
 
   const handleRestore = async () => {
     if (!validation?.valid) {
