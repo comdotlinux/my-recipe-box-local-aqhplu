@@ -4,6 +4,7 @@ import { View, Text, ScrollView, TouchableOpacity, Alert, Share } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
+import Toast from 'react-native-toast-message';
 import { commonStyles, colors, typography, spacing, borderRadius } from '../../styles/commonStyles';
 import { RootState, AppDispatch } from '../../store';
 import { loadRecipe, toggleFavorite, deleteRecipe } from '../../store/slices/recipesSlice';
@@ -27,17 +28,45 @@ export default function RecipeDetailScreen() {
     }
   }, [id, dispatch]);
 
-  const handleToggleFavorite = () => {
+  const handleToggleFavorite = async () => {
     if (currentRecipe) {
-      console.log('Toggling favorite for recipe:', currentRecipe.id);
-      dispatch(toggleFavorite(currentRecipe));
+      try {
+        console.log('Toggling favorite for recipe:', currentRecipe.id);
+        const result = await dispatch(toggleFavorite(currentRecipe)).unwrap();
+        
+        // Show toast notification
+        Toast.show({
+          type: 'success',
+          text1: result.is_favorite ? 'Added to Favorites' : 'Removed from Favorites',
+          text2: result.is_favorite 
+            ? `"${result.title}" is now in your favorites.`
+            : `"${result.title}" has been removed from favorites.`,
+          position: 'bottom',
+          bottomOffset: 100,
+        });
+      } catch (error) {
+        console.error('Failed to toggle favorite:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Failed to Update Favorite',
+          text2: error instanceof Error ? error.message : 'Unknown error. Please try again.',
+          position: 'bottom',
+          bottomOffset: 100,
+        });
+      }
     }
   };
 
   const handleEditRecipe = () => {
     console.log('Editing recipe:', id);
     // TODO: Navigate to edit screen
-    Alert.alert('Edit Recipe', 'Edit functionality will be implemented in the next phase.');
+    Toast.show({
+      type: 'info',
+      text1: 'Coming Soon',
+      text2: 'Edit functionality will be implemented in the next phase.',
+      position: 'bottom',
+      bottomOffset: 100,
+    });
   };
 
   const handleDeleteRecipe = () => {
@@ -52,9 +81,33 @@ export default function RecipeDetailScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            console.log('Deleting recipe:', currentRecipe.id);
-            await dispatch(deleteRecipe(currentRecipe.id));
-            router.back();
+            try {
+              console.log('Deleting recipe:', currentRecipe.id);
+              await dispatch(deleteRecipe(currentRecipe.id)).unwrap();
+              
+              // Show success toast
+              Toast.show({
+                type: 'success',
+                text1: 'Recipe Deleted',
+                text2: `"${currentRecipe.title}" has been removed from your collection.`,
+                position: 'bottom',
+                bottomOffset: 100,
+              });
+              
+              // Navigate back after a short delay to let the toast show
+              setTimeout(() => {
+                router.back();
+              }, 500);
+            } catch (error) {
+              console.error('Failed to delete recipe:', error);
+              Toast.show({
+                type: 'error',
+                text1: 'Failed to Delete Recipe',
+                text2: error instanceof Error ? error.message : 'Unknown error. Please try again.',
+                position: 'bottom',
+                bottomOffset: 100,
+              });
+            }
           },
         },
       ]
@@ -365,7 +418,13 @@ export default function RecipeDetailScreen() {
                 style={[commonStyles.card, commonStyles.row]}
                 onPress={() => {
                   // TODO: Open URL in browser
-                  Alert.alert('Source URL', currentRecipe.source_url);
+                  Toast.show({
+                    type: 'info',
+                    text1: 'Source URL',
+                    text2: currentRecipe.source_url || 'No URL available',
+                    position: 'bottom',
+                    bottomOffset: 100,
+                  });
                 }}
               >
                 <Icon name="link" size={20} color={colors.primary} />

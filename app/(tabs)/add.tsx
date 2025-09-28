@@ -4,6 +4,7 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Image, Keyb
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { router } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
 import { commonStyles, colors, typography, spacing, borderRadius, buttonStyles } from '../../styles/commonStyles';
 import { AppDispatch } from '../../store';
@@ -41,7 +42,13 @@ export default function AddRecipeScreen() {
     
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera permission is required to take photos.');
+      Toast.show({
+        type: 'error',
+        text1: 'Permission Needed',
+        text2: 'Camera permission is required to take photos.',
+        position: 'bottom',
+        bottomOffset: 100,
+      });
       return;
     }
 
@@ -66,13 +73,32 @@ export default function AddRecipeScreen() {
             handleInputChange('title', 'New Recipe');
           }
           console.log('Photo processed and saved successfully');
+          Toast.show({
+            type: 'success',
+            text1: 'Photo Added',
+            text2: 'Your photo has been added to the recipe.',
+            position: 'bottom',
+            bottomOffset: 100,
+          });
         } else {
-          Alert.alert('Error', 'Failed to save photo. Please try again.');
+          Toast.show({
+            type: 'error',
+            text1: 'Failed to Save Photo',
+            text2: 'Please try again.',
+            position: 'bottom',
+            bottomOffset: 100,
+          });
         }
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Take Photo',
+        text2: 'Please try again.',
+        position: 'bottom',
+        bottomOffset: 100,
+      });
     } finally {
       setIsProcessingImage(false);
     }
@@ -83,7 +109,13 @@ export default function AddRecipeScreen() {
     
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Gallery permission is required to select photos.');
+      Toast.show({
+        type: 'error',
+        text1: 'Permission Needed',
+        text2: 'Gallery permission is required to select photos.',
+        position: 'bottom',
+        bottomOffset: 100,
+      });
       return;
     }
 
@@ -108,13 +140,32 @@ export default function AddRecipeScreen() {
             handleInputChange('title', 'New Recipe');
           }
           console.log('Image processed and saved successfully');
+          Toast.show({
+            type: 'success',
+            text1: 'Image Added',
+            text2: 'Your image has been added to the recipe.',
+            position: 'bottom',
+            bottomOffset: 100,
+          });
         } else {
-          Alert.alert('Error', 'Failed to save image. Please try again.');
+          Toast.show({
+            type: 'error',
+            text1: 'Failed to Save Image',
+            text2: 'Please try again.',
+            position: 'bottom',
+            bottomOffset: 100,
+          });
         }
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Select Image',
+        text2: 'Please try again.',
+        position: 'bottom',
+        bottomOffset: 100,
+      });
     } finally {
       setIsProcessingImage(false);
     }
@@ -123,6 +174,13 @@ export default function AddRecipeScreen() {
   const handleRemoveImage = () => {
     console.log('Removing selected image');
     setSelectedImage(null);
+    Toast.show({
+      type: 'success',
+      text1: 'Image Removed',
+      text2: 'The image has been removed from the recipe.',
+      position: 'bottom',
+      bottomOffset: 100,
+    });
   };
 
   const handleSaveRecipe = async () => {
@@ -135,13 +193,25 @@ export default function AddRecipeScreen() {
     
     // Validate required fields
     if (!formData.title.trim()) {
-      Alert.alert('Missing title', 'Please enter a recipe title to save your recipe.');
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Title',
+        text2: 'Please enter a recipe title to save your recipe.',
+        position: 'bottom',
+        bottomOffset: 100,
+      });
       return;
     }
 
     // For URL tab, ensure we have either a URL or some content
     if (activeTab === 'url' && !formData.source_url.trim() && !formData.description.trim() && !formData.notes.trim()) {
-      Alert.alert('Missing content', 'Please add a URL or some recipe details to save.');
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Content',
+        text2: 'Please add a URL or some recipe details to save.',
+        position: 'bottom',
+        bottomOffset: 100,
+      });
       return;
     }
 
@@ -174,14 +244,28 @@ export default function AddRecipeScreen() {
       const result = await dispatch(createRecipe(recipeData)).unwrap();
       console.log('Recipe saved successfully with result:', result);
       
-      Alert.alert(
-        'Recipe saved!',
-        'Your recipe has been added to your collection.',
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+      // Show success toast
+      Toast.show({
+        type: 'success',
+        text1: 'Recipe Saved!',
+        text2: 'Your recipe has been added to your collection.',
+        position: 'bottom',
+        bottomOffset: 100,
+      });
+      
+      // Navigate back after a short delay to let the toast show
+      setTimeout(() => {
+        router.back();
+      }, 500);
     } catch (error) {
       console.error('Failed to save recipe:', error);
-      Alert.alert('Error', `Failed to save recipe: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Save Recipe',
+        text2: error instanceof Error ? error.message : 'Unknown error. Please try again.',
+        position: 'bottom',
+        bottomOffset: 100,
+      });
     }
   };
 

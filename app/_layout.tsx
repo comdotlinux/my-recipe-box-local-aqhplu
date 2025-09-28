@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
+import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { store, persistor } from '../store';
@@ -110,6 +111,79 @@ export default function RootLayout() {
               <Stack.Screen name="import/preview" options={{ headerShown: false }} />
             </Stack>
             <StatusBar style="auto" />
+            <Toast 
+              config={{
+                success: (props) => (
+                  <BaseToast
+                    {...props}
+                    style={{
+                      borderLeftColor: colors.success,
+                      backgroundColor: colors.surface,
+                      borderRadius: 12,
+                      marginHorizontal: 16,
+                    }}
+                    contentContainerStyle={{
+                      paddingHorizontal: 15,
+                    }}
+                    text1Style={{
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: colors.text,
+                    }}
+                    text2Style={{
+                      fontSize: 14,
+                      color: colors.textSecondary,
+                    }}
+                  />
+                ),
+                error: (props) => (
+                  <ErrorToast
+                    {...props}
+                    style={{
+                      borderLeftColor: colors.error,
+                      backgroundColor: colors.surface,
+                      borderRadius: 12,
+                      marginHorizontal: 16,
+                    }}
+                    contentContainerStyle={{
+                      paddingHorizontal: 15,
+                    }}
+                    text1Style={{
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: colors.text,
+                    }}
+                    text2Style={{
+                      fontSize: 14,
+                      color: colors.textSecondary,
+                    }}
+                  />
+                ),
+                info: (props) => (
+                  <BaseToast
+                    {...props}
+                    style={{
+                      borderLeftColor: colors.primary,
+                      backgroundColor: colors.surface,
+                      borderRadius: 12,
+                      marginHorizontal: 16,
+                    }}
+                    contentContainerStyle={{
+                      paddingHorizontal: 15,
+                    }}
+                    text1Style={{
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: colors.text,
+                    }}
+                    text2Style={{
+                      fontSize: 14,
+                      color: colors.textSecondary,
+                    }}
+                  />
+                ),
+              }}
+            />
           </SafeAreaProvider>
         </PersistGate>
       </Provider>
