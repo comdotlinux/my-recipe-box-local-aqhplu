@@ -55,6 +55,37 @@ const VersionCompatibilityInfo: React.FC<VersionCompatibilityInfoProps> = ({
   const compatibility = getCompatibilityStatus();
   const matrix = getVersionMatrix();
 
+  // Move styles inside component to access showMatrix prop
+  const styles = {
+    container: {
+      backgroundColor: colors.surfaceVariant,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginVertical: spacing.sm,
+    },
+    versionInfo: {
+      marginBottom: showMatrix ? spacing.md : 0,
+    },
+    versionRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      marginBottom: spacing.xs,
+    },
+    versionDetails: {
+      marginLeft: 28,
+    },
+    matrixContainer: {
+      borderTopWidth: 1,
+      borderTopColor: colors.outline,
+      paddingTop: spacing.md,
+    },
+    matrixRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingVertical: spacing.xs,
+    },
+  };
+
   const renderVersionInfo = () => (
     <View style={styles.versionInfo}>
       <View style={styles.versionRow}>
@@ -104,36 +135,6 @@ const VersionCompatibilityInfo: React.FC<VersionCompatibilityInfoProps> = ({
       {renderMatrix()}
     </View>
   );
-};
-
-const styles = {
-  container: {
-    backgroundColor: colors.surfaceVariant,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginVertical: spacing.sm,
-  },
-  versionInfo: {
-    marginBottom: showMatrix ? spacing.md : 0,
-  },
-  versionRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    marginBottom: spacing.xs,
-  },
-  versionDetails: {
-    marginLeft: 28,
-  },
-  matrixContainer: {
-    borderTopWidth: 1,
-    borderTopColor: colors.outline,
-    paddingTop: spacing.md,
-  },
-  matrixRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    paddingVertical: spacing.xs,
-  },
 };
 
 export default VersionCompatibilityInfo;
