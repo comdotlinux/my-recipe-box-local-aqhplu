@@ -10,11 +10,12 @@ export interface ImageInfo {
 }
 
 export const createImagesDirectory = async (): Promise<string> => {
-  if (!FileSystem.documentDirectory) {
+  const documentsDirectory = FileSystem.documentDirectory;
+  if (!documentsDirectory) {
     throw new Error('Document directory not available');
   }
 
-  const imagesDir = `${FileSystem.documentDirectory}images/`;
+  const imagesDir = `${documentsDirectory}images/`;
   const dirInfo = await FileSystem.getInfoAsync(imagesDir);
   
   if (!dirInfo.exists) {
@@ -29,7 +30,8 @@ export const saveImageToAppDirectory = async (imageUri: string, recipeId?: strin
   try {
     console.log('Saving image to app directory:', imageUri);
     
-    if (!FileSystem.documentDirectory) {
+    const documentsDirectory = FileSystem.documentDirectory;
+    if (!documentsDirectory) {
       console.error('Document directory not available');
       return null;
     }

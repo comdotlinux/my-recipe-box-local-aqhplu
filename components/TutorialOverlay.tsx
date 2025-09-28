@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Dimensions, StyleSheet } from 'react-native';
 import { commonStyles, colors, typography, spacing, borderRadius } from '../styles/commonStyles';
 import Icon from './Icon';
 
@@ -229,17 +229,17 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   );
 };
 
-const styles = {
+const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    position: 'relative' as const,
+    position: 'relative',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   tooltip: {
-    position: 'absolute' as const,
+    position: 'absolute',
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.xl,
@@ -250,18 +250,18 @@ const styles = {
     elevation: 16,
   },
   iconContainer: {
-    alignItems: 'center' as const,
+    alignItems: 'center',
     marginBottom: spacing.lg,
   },
   content: {
-    alignItems: 'center' as const,
+    alignItems: 'center',
   },
   progressContainer: {
-    alignItems: 'center' as const,
+    alignItems: 'center',
     marginBottom: spacing.lg,
   },
   progressDots: {
-    flexDirection: 'row' as const,
+    flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
@@ -271,33 +271,33 @@ const styles = {
     borderRadius: 4,
   },
   actionsContainer: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   leftActions: {
     flex: 1,
   },
   rightActions: {
-    flexDirection: 'row' as const,
+    flexDirection: 'row',
     gap: spacing.md,
   },
   primaryButton: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
   },
   secondaryButton: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
   highlight: {
-    position: 'absolute' as const,
+    position: 'absolute',
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -305,9 +305,6 @@ const styles = {
     borderColor: colors.primary,
     backgroundColor: 'transparent',
   },
-};
-
-// Add StyleSheet import
-import { StyleSheet } from 'react-native';
+});
 
 export default TutorialOverlay;

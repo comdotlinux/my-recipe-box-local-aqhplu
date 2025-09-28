@@ -231,10 +231,11 @@ class GoogleDriveBackup {
 
       // Create backup file
       const fileName = `backup_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
-      if (!FileSystem.documentDirectory) {
+      const documentsDirectory = FileSystem.documentDirectory;
+      if (!documentsDirectory) {
         throw new Error('Document directory not available');
       }
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+      const fileUri = `${documentsDirectory}${fileName}`;
       
       await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backupData));
 

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { commonStyles, colors, typography, spacing, borderRadius } from '../styles/commonStyles';
 import Icon from './Icon';
@@ -41,27 +41,7 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
   const [currentTest, setCurrentTest] = useState<string>('');
   const [isCreatingTestData, setIsCreatingTestData] = useState(false);
 
-  useEffect(() => {
-    if (isVisible && results.length === 0) {
-      runVerification();
-    }
-  }, [isVisible]);
-
-  const updateResult = (category: string, feature: string, status: VerificationResult['status'], message?: string, details?: string) => {
-    setResults(prev => {
-      const existing = prev.find(r => r.category === category && r.feature === feature);
-      if (existing) {
-        existing.status = status;
-        existing.message = message;
-        existing.details = details;
-        return [...prev];
-      } else {
-        return [...prev, { category, feature, status, message, details }];
-      }
-    });
-  };
-
-  const runVerification = async () => {
+  const runVerification = useCallback(async () => {
     setIsRunning(true);
     setResults([]);
 
@@ -93,6 +73,26 @@ const FeatureVerificationPanel: React.FC<FeatureVerificationPanelProps> = ({
       setIsRunning(false);
       setCurrentTest('');
     }
+  }, []);
+
+  useEffect(() => {
+    if (isVisible && results.length === 0) {
+      runVerification();
+    }
+  }, [isVisible, results.length, runVerification]);
+
+  const updateResult = (category: string, feature: string, status: VerificationResult['status'], message?: string, details?: string) => {
+    setResults(prev => {
+      const existing = prev.find(r => r.category === category && r.feature === feature);
+      if (existing) {
+        existing.status = status;
+        existing.message = message;
+        existing.details = details;
+        return [...prev];
+      } else {
+        return [...prev, { category, feature, status, message, details }];
+      }
+    });
   };
 
   const verifyFirstLaunch = async () => {
